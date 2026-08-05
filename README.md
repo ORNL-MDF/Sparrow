@@ -89,7 +89,7 @@ To build this documentation site locally (Doxygen + Sphinx), see
 ## License
 
 `cpp_oti_lib` is distributed under the
-[Apache License 2.0 with LLVM Exceptions](LICENSE), the license used by Kokkos.
+[Apache License 2.0 with LLVM Exceptions](LICENSE).
 Questions may be directed to Samuel Roberts (samuel.roberts@utsa.edu),
-Bruno Turcksin (TURCKSINBR@ORNL.GOV), or Benjamin C. Stump
-(STUMPBC@ORNL.GOV).
+Bruno Turcksin (turcksinbr@ornl.gov), or Benjamin C. Stump
+(stumpbc@ornl.gov).
