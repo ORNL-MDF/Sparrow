@@ -10,11 +10,13 @@ name = "otinum"
 version = "0.1.0"
 description = "Python bindings for the header-only static OTI number library"
 readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.9"
 authors = [
     { name = "cpp_oti_lib contributors" },
 ]
 classifiers = [
+    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: C++",
     "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering :: Mathematics",

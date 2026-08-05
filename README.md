@@ -85,3 +85,11 @@ ctest --test-dir build --output-on-failure
 
 To build this documentation site locally (Doxygen + Sphinx), see
 [Building These Docs](docs/installation.rst) in the installation guide.
+
+## License
+
+`cpp_oti_lib` is distributed under the
+[Apache License 2.0 with LLVM Exceptions](LICENSE), the license used by Kokkos.
+Questions may be directed to Samuel Roberts (samuel.roberts@utsa.edu),
+Bruno Turcksin (TURCKSINBR@ORNL.GOV), or Benjamin C. Stump
+(STUMPBC@ORNL.GOV).
