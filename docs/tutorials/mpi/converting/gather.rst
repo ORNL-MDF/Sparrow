@@ -155,7 +155,7 @@ datatype.
 Build Changes
 -------------
 
-If ``cpp_oti_lib`` is installed as a CMake package, use its exported interface
+If Sparrow is installed as a CMake package, use its exported interface
 target:
 
 .. code-block:: cmake
@@ -181,7 +181,7 @@ directory directly remains valid:
 
 .. code-block:: cmake
 
-   target_include_directories(my_app PRIVATE /path/to/cpp_oti_lib/include)
+   target_include_directories(my_app PRIVATE /path/to/sparrow/include)
    target_link_libraries(my_app PRIVATE MPI::MPI_CXX)
 
 For an application that already uses Kokkos, the additional **OTI-specific**

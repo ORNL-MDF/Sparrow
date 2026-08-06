@@ -1,8 +1,8 @@
-cpp_oti_lib Documentation
-=========================
+Sparrow Documentation
+=====================
 
-``cpp_oti_lib`` is a header-only C++ library for static OTI numbers stored as
-truncated multivariate Taylor polynomials. The primary type is
+Sparrow is a header-only C++ library for static OTI numbers stored as truncated
+multivariate Taylor polynomials. The primary type is
 ``oti::otinum<M, N, Coeff = double>``, where ``M`` is the number of variables,
 ``N`` is the maximum total derivative order, and ``Coeff`` selects the
 floating-point coefficient type.
@@ -14,7 +14,7 @@ tools each workflow needs.
 
 Automatic differentiation is a useful tool for computing sensitivities, but
 introducing derivative calculations into existing C++ simulation codes can
-require substantial source-code modification. ``cpp_oti_lib`` provides a compact
+require substantial source-code modification. Sparrow provides a compact
 header-only implementation of order-truncated imaginary (OTI) numbers for
 hypercomplex automatic differentiation.
 

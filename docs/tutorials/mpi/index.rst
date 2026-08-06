@@ -10,7 +10,7 @@ first-class element, with send/receive/collective counts expressed in *jets*
 rather than bytes. (See :doc:`../soa_layout` for the alignment rule that keeps the
 layout padding-free.)
 
-``cpp_oti_lib`` provides MPI helpers for communicating OTI numbers.
+Sparrow provides MPI helpers for communicating OTI numbers.
 :doc:`datatype_helper` describes how the jet is committed as a datatype
 to MPI. :doc:`message_volume` covers the cost: each message is ``ncoeffs`` × the
 equivalent scalar message. :doc:`Converting Code to OTI <converting/index>`

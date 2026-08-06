@@ -1,5 +1,5 @@
-PROJECT_NAME           = "cpp_oti_lib"
-PROJECT_BRIEF          = "Header-only static OTI number library"
+PROJECT_NAME           = "Sparrow"
+PROJECT_BRIEF          = "Performance-portable higher-order automatic differentiation in C++"
 OUTPUT_DIRECTORY       = docs/api
 INPUT                  = include/otinum
 RECURSIVE              = YES

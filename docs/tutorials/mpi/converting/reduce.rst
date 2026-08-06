@@ -72,7 +72,7 @@ What each change is for:
 #. **Include the optional headers.** ``otinum/mpi.hpp`` provides *both* the
    datatype and the reduction operator.
 #. **Change the scalar type** to the OTI shape needed by this example: two
-   derivative directions through order two. cpp_oti_lib is agnostic to order; the
+   derivative directions through order two. Sparrow is agnostic to order; the
    reduction code works the same for any ``otinum<M, N, Coeff>``.
 #. **Seed the design parameters** as variables -- the one new line of intent,
    declaring what you want sensitivities with respect to.

@@ -14,8 +14,8 @@ sys.path.insert(0, str(repository_root))
 with (repository_root / "pyproject.toml").open("rb") as pyproject_file:
     release = tomllib.load(pyproject_file)["project"]["version"]
 
-project = "cpp_oti_lib"
-author = "cpp_oti_lib contributors"
+project = "Sparrow"
+author = "Sparrow contributors"
 copyright = f"{datetime.now().year}, {author}"
 
 extensions = [
@@ -36,13 +36,13 @@ exclude_patterns = [
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
-html_title = "cpp_oti_lib"
+html_title = "Sparrow"
 html_show_sourcelink = False
 
 breathe_projects = {
-    "cpp_oti_lib": os.path.abspath("api/xml"),
+    "Sparrow": os.path.abspath("api/xml"),
 }
-breathe_default_project = "cpp_oti_lib"
+breathe_default_project = "Sparrow"
 breathe_domain_by_extension = {
     "hpp": "cpp",
 }

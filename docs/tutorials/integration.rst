@@ -1,7 +1,7 @@
-Integrating cpp_oti_lib Into An MPI + Kokkos Application
-========================================================
+Integrating Sparrow Into An MPI + Kokkos Application
+=====================================================
 
-This guide is the culmination of the tutorials: how to bring ``cpp_oti_lib``
+This guide is the culmination of the tutorials: how to bring Sparrow
 into your own simulation code when you are already (or want to be) running on
 **MPI** for distribution and **Kokkos** for on-node / GPU parallelism. It pulls
 together the datatype helper from :doc:`mpi/index` and the device transport
@@ -11,7 +11,7 @@ toolchain pitfalls that actually bite when you stack these three pieces.
 The Dependency Model
 --------------------
 
-The single most important thing to understand is that **cpp_oti_lib depends on
+The single most important thing to understand is that **Sparrow depends on
 neither MPI nor Kokkos**. It is header-only, and it *interoperates* with both
 rather than requiring them:
 
@@ -21,14 +21,14 @@ rather than requiring them:
         |        |              <- your real dependencies
      Kokkos     MPI
         |        |
-   cpp_oti_lib (header-only)    <- adapts to whatever you already link
+   Sparrow (header-only)        <- adapts to whatever you already link
      - core headers:     plain C++17, no dependencies
      - OTI_ENABLE_KOKKOS: makes otinum device-callable (uses Kokkos::Array,
                           annotates arithmetic for device kernels)
      - otinum/mpi.hpp:    one committed MPI_Datatype per jet shape
 
-So you do not "add cpp_oti_lib and then get MPI and Kokkos." You bring your own
-Kokkos and MPI; ``cpp_oti_lib`` is a thin header layer that knows how to ride on
+So you do not "add Sparrow and then get MPI and Kokkos." You bring your own
+Kokkos and MPI; Sparrow is a thin header layer that knows how to ride on
 them. The scalar library works with neither installed; each optional piece turns
 on only when you opt in.
 

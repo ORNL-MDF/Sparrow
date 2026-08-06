@@ -7,7 +7,7 @@ heat equation with an OTI sensitivity jet at every node -- with the same
 optimizations switched on one at a time, so the per-isolation results can be
 seen compounding in production.
 
-The solver lives in its own repository, built to exercise ``cpp_oti_lib`` as a
+The solver lives in its own repository, built to exercise Sparrow as a
 drop-in ``Scalar`` type:
 
    https://github.com/Samm-Py/heat_equation
@@ -148,7 +148,7 @@ layout studies single out.
 Reproducing
 -----------
 
-Clone the heat solver beside ``cpp_oti_lib`` (so its headers resolve at
+Clone the heat solver beside the Sparrow checkout (so its headers resolve at
 ``../include``). Everything here runs on a **CUDA Kokkos** build: configure a
 ``build-cuda`` directory once with ``nvcc_wrapper`` against a CUDA-enabled Kokkos
 install, then build it (the runners verify the ``Cuda`` backend; pass

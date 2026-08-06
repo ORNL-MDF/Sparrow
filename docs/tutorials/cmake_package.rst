@@ -15,7 +15,7 @@ installed copy of the library.
 Install The Package
 -------------------
 
-From the ``cpp_oti_lib`` repository root, install the headers and the CMake
+From the Sparrow repository root, install the headers and the CMake
 package files to a prefix. Any writable directory works; this example uses
 ``/tmp/otinum-install``:
 

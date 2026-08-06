@@ -6,14 +6,14 @@ requires = [
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "otinum"
+name = "sparrow-ad"
 version = "0.1.0"
-description = "Python bindings for the header-only static OTI number library"
+description = "Python bindings for Sparrow, a header-only static OTI number library"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
 authors = [
-    { name = "cpp_oti_lib contributors" },
+    { name = "Sparrow contributors" },
 ]
 classifiers = [
     "License :: OSI Approved :: Apache Software License",

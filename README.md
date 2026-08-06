@@ -1,13 +1,19 @@
-# cpp_oti_lib
+# Sparrow
 
-Header-only C++17 library for **order-truncated imaginary (OTI) numbers** —
-truncated multivariate Taylor polynomials for forward-mode automatic
+**Performance-portable higher-order automatic differentiation in C++.**
+
+Sparrow is a header-only C++17 library for **order-truncated imaginary (OTI)
+numbers** — truncated multivariate Taylor polynomials for forward-mode automatic
 differentiation. A single overloaded model evaluation returns the function value
-together with its derivatives, so many numerical kernels can be differentiated by
-changing selected scalar types instead of rewriting the kernel logic.
+together with its derivatives, so many numerical kernels can be differentiated
+by changing selected scalar types instead of rewriting the kernel logic.
 
 For the original OTI library, see
 [`mauriaristi/otilib`](https://github.com/mauriaristi/otilib).
+
+The project name is Sparrow, and its Python distribution is named `sparrow-ad`.
+To preserve compatibility, the established C++ namespace and headers, CMake
+package and target, and Python import module continue to use `oti` and `otinum`.
 
 The core type is `oti::otinum<M, N, Coeff = double>`: `M` independent variables,
 total derivative order `N`, and coefficient type `Coeff` (`double` or `float`).
@@ -88,7 +94,7 @@ To build this documentation site locally (Doxygen + Sphinx), see
 
 ## License
 
-`cpp_oti_lib` is distributed under the
+Sparrow is distributed under the
 [Apache License 2.0 with LLVM Exceptions](LICENSE).
 Questions may be directed to Samuel Roberts (samuel.roberts@utsa.edu),
 Bruno Turcksin (turcksinbr@ornl.gov), or Benjamin C. Stump

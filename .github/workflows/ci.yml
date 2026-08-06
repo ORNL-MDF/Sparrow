@@ -85,7 +85,7 @@ jobs:
             -DKokkos_ARCH_NATIVE=ON
           cmake --build /tmp/kokkos-build-openmp --target install --parallel 2
 
-      - name: Configure cpp_oti_lib with Kokkos OpenMP
+      - name: Configure Sparrow with Kokkos OpenMP
         # OTI_BUILD_TESTS=ON builds the full scalar suite against the
         # Kokkos::Array backing (not just the smoke test), so the
         # OTI_ENABLE_KOKKOS storage path is exercised by every test.
@@ -145,7 +145,7 @@ jobs:
             -DKokkos_ARCH_NATIVE=ON
           cmake --build /tmp/kokkos-build-cuda --target install --parallel 2
 
-      - name: Configure cpp_oti_lib with Kokkos CUDA
+      - name: Configure Sparrow with Kokkos CUDA
         if: steps.cuda.outputs.available == 'true'
         run: |
           cmake -S . -B build-kokkos-cuda \

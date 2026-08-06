@@ -2,7 +2,7 @@ Kokkos GPU Tutorial
 ===================
 
 GPU execution uses the same OTI headers, but the Kokkos installation must be
-built with a GPU backend such as CUDA. The ``cpp_oti_lib`` side still uses the
+built with a GPU backend such as CUDA. The Sparrow side still uses the
 same CMake option, ``-DOTI_ENABLE_KOKKOS=ON``; the main difference is that the
 Kokkos package and compiler wrapper must be configured for device compilation.
 
@@ -69,7 +69,7 @@ recent enough default:
 
 ``nvcc_wrapper`` does not take the host compiler as a CMake flag; it reads the
 ``NVCC_WRAPPER_DEFAULT_COMPILER`` environment variable. Export it before
-configuring Kokkos *and* ``cpp_oti_lib``, so both use the same host compiler:
+configuring Kokkos *and* Sparrow, so both use the same host compiler:
 
 .. code-block:: console
 
@@ -100,7 +100,7 @@ paths, so they can run from any directory.
    cmake --build /tmp/kokkos-build-cuda --target install --parallel
 
 ``nvcc_wrapper`` is the C++ compiler for this configuration. Use it both when
-building Kokkos and when configuring ``cpp_oti_lib`` against that Kokkos
+building Kokkos and when configuring Sparrow against that Kokkos
 install.
 
 If you already attempted this configure with an older compiler, delete the
@@ -112,10 +112,10 @@ identification is ...`` line in the output is the sign that the cache, not your
 new compiler, is in effect.
 
 The architecture flag also depends on the target machine; that is a
-CUDA/Kokkos configuration choice rather than a ``cpp_oti_lib`` API choice.
+CUDA/Kokkos configuration choice rather than a Sparrow API choice.
 
-Configure cpp_oti_lib
----------------------
+Configure Sparrow
+-----------------
 
 Use the same Kokkos compiler wrapper and installation prefix. This ensures
 that ``find_package(Kokkos)`` imports the CUDA-enabled ``Kokkos::kokkos`` target

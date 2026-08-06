@@ -1,6 +1,6 @@
 #pragma once
 
-// Optional MPI interop for cpp_oti_lib.
+// Optional MPI interop for Sparrow.
 //
 // Include this ONLY in translation units that already pull in <mpi.h> and link
 // against MPI. It is deliberately NOT part of the otinum.hpp umbrella, so the

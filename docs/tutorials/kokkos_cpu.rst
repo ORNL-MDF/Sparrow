@@ -29,9 +29,9 @@ On Ubuntu, a suitable compiler is one package away if the default is too old:
 
    sudo apt-get install g++-10
 
-Use the same compiler for Kokkos and ``cpp_oti_lib``: whatever
+Use the same compiler for Kokkos and Sparrow: whatever
 ``-DCMAKE_CXX_COMPILER`` value you give the Kokkos configure below, give the
-``cpp_oti_lib`` configure the same one.
+Sparrow configure the same one.
 
 Install Or Build Kokkos
 -----------------------
@@ -62,14 +62,14 @@ The install step writes the CMake package files that ``find_package(Kokkos)``
 uses later. In this example, those files are under
 ``/tmp/kokkos-install-openmp``.
 
-Configure cpp_oti_lib
----------------------
+Configure Sparrow
+-----------------
 
 Point ``CMAKE_PREFIX_PATH`` at the Kokkos install. This lets CMake find the
 ``Kokkos::kokkos`` target, which carries the required include directories,
 compile definitions, backend flags, and link flags.
 
-Run this from the repository root — the ``cpp_oti_lib`` checkout, where the
+Run this from the repository root — the Sparrow checkout, where the
 top-level ``CMakeLists.txt`` lives — since ``-S .`` and the relative
 ``build-kokkos-cpu`` path are resolved against the current directory:
 
@@ -209,7 +209,7 @@ gets both the definition and the Kokkos dependency automatically):
    find_package(Kokkos REQUIRED)
 
    add_executable(jet_grid main.cpp)
-   target_include_directories(jet_grid PRIVATE /path/to/cpp_oti_lib/include)
+   target_include_directories(jet_grid PRIVATE /path/to/sparrow/include)
    target_compile_definitions(jet_grid PRIVATE OTI_ENABLE_KOKKOS)
    target_link_libraries(jet_grid PRIVATE Kokkos::kokkos)
 
@@ -258,7 +258,7 @@ with :doc:`cmake_package`-style ``find_package``. The only twist for the
 Kokkos case is that the package must be installed with Kokkos enabled, and the
 consumer then needs two install prefixes on its search path.
 
-The ``build-kokkos-cpu`` directory from `Configure cpp_oti_lib`_ is already a
+The ``build-kokkos-cpu`` directory from `Configure Sparrow`_ is already a
 Kokkos-enabled build, so no second configure is needed — from the repository
 root, install it to a prefix directly:
 
@@ -338,5 +338,5 @@ table of minimum versions, your default compiler is older than Kokkos
 accepts. Install a supported compiler (see Prerequisites), delete the Kokkos
 build directory so the cached compiler choice is forgotten, and re-run the
 configure with ``-DCMAKE_CXX_COMPILER`` pointing at the new compiler — for
-example ``g++-10``. Remember to pass the same compiler to the ``cpp_oti_lib``
+example ``g++-10``. Remember to pass the same compiler to the Sparrow
 configure afterwards.

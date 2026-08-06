@@ -29,8 +29,8 @@ repository root" means this directory:
 
 .. code-block:: console
 
-   git clone https://github.com/Samm-Py/cpp_oti_lib.git
-   cd cpp_oti_lib
+   git clone https://github.com/Samm-Py/cpp_oti_lib.git sparrow
+   cd sparrow
 
 There is nothing to build at this point. The scalar C++ library is the header
 tree under ``include/``, so cloning *is* the installation for the header-only
@@ -126,7 +126,7 @@ From a separate scratch directory, use the absolute include path instead:
    cd ~/oti_scratch
 
    c++ -std=c++17 \
-     -I /path/to/cpp_oti_lib/include \
+     -I /path/to/sparrow/include \
      my_program.cpp \
      -o my_program
 
@@ -135,7 +135,7 @@ From a separate scratch directory, use the absolute include path instead:
 In this example:
 
 * ``my_program.cpp`` is your own source file in the scratch directory.
-* ``-I /path/to/cpp_oti_lib/include`` tells the compiler where to find
+* ``-I /path/to/sparrow/include`` tells the compiler where to find
   ``otinum/otinum.hpp``; replace the path with your checkout location.
 * ``-o my_program`` names the executable that will be created.
 * ``./my_program`` runs the executable and prints the program output.
@@ -146,7 +146,7 @@ In this example:
    directory *inside* the checkout, not at the checkout root. If the compiler
    reports ``fatal error: otinum/otinum.hpp: No such file or directory``,
    check that the path exists and ends in ``/include``:
-   ``ls /path/to/cpp_oti_lib/include/otinum/otinum.hpp`` should succeed.
+   ``ls /path/to/sparrow/include/otinum/otinum.hpp`` should succeed.
 
 Installing The CMake Package
 ----------------------------
@@ -229,7 +229,7 @@ The ``*_kokkos`` tests are the exception: ``test_kokkos_smoke.cpp`` and
 ``test_validity_kokkos.cpp`` require Kokkos, an optional dependency not
 covered on this page, so both the shell runner and the default CMake build
 skip them. :doc:`tutorials/kokkos_cpu` is a self-contained guide to that path
-— it covers building Kokkos itself from source, configuring ``cpp_oti_lib``
+— it covers building Kokkos itself from source, configuring Sparrow
 against it with ``-DOTI_ENABLE_KOKKOS=ON``, and running the smoke test;
 :doc:`tutorials/kokkos_gpu` does the same for the CUDA backend.
 

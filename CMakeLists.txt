@@ -1,14 +1,14 @@
 cmake_minimum_required(VERSION 3.18)
 
-project(cpp_oti_lib LANGUAGES CXX)
+project(Sparrow LANGUAGES CXX)
 
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
 option(OTI_ENABLE_KOKKOS "Enable Kokkos support and its smoke test" OFF)
 option(OTI_BUILD_PYTHON "Build the Python extension module" OFF)
-option(OTI_BUILD_TESTS "Build focused otinum unit tests" ON)
-option(OTI_BUILD_BENCHMARKS "Build optional otinum microbenchmarks" OFF)
+option(OTI_BUILD_TESTS "Build focused Sparrow unit tests" ON)
+option(OTI_BUILD_BENCHMARKS "Build optional Sparrow microbenchmarks" OFF)
 option(OTI_INSTALL_CMAKE_PACKAGE "Install headers and CMake package files" ON)
 
 add_library(otinum_headers INTERFACE)

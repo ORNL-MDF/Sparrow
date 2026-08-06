@@ -1,6 +1,6 @@
 # mpi_oti_toy — moving OTI numbers over MPI
 
-The minimal possible MPI + `cpp_oti_lib` program. It evaluates a function over a
+The minimal possible MPI + Sparrow program. It evaluates a function over a
 1000×1000 grid, **embarrassingly parallel** (no ghost nodes, no halo exchange),
 and gathers every jet back to rank 0 using a *committed* MPI datatype for one
 `otinum`.
