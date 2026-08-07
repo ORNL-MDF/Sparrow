@@ -1,10 +1,10 @@
 // Confidence test: the oti::validity error-analysis methods run correctly under
 // MPI and are decomposition-invariant.
 //
-// A G x G grid of OTI jets (the surrogate f = exp(x) + exp(y) + 0.5 x y expanded
+// A G x G grid of OTI numbers (the surrogate f = exp(x) + exp(y) + 0.5 x y expanded
 // at each grid point) is block-distributed across ranks. Every rank runs the
-// validity primitives on its own jets -- is_trusted, validity_radius (which here
-// folds orders 2 AND 3 via the bracket-and-bisection, since the jet is <2,3>
+// validity primitives on its own OTI numbers -- is_trusted, validity_radius (which here
+// folds orders 2 AND 3 via the bracket-and-bisection, since the OTI number is <2,3>
 // certifying the LINEAR model), and truncation_error -- then we reduce two global
 // quantities that MUST be identical for any rank count:
 //   * trusted-point COUNT          (integer sum -> exact)
@@ -29,7 +29,7 @@ using J = oti::otinum<2, 3, double>;  // order 3: certify the linear model (m=1)
 namespace v = oti::validity;
 
 // Local truncated-Taylor surrogate of f = exp(x) + exp(y) + 0.5 x y at (x0, y0).
-static J make_jet(double x0, double y0)
+static J make_oti_number(double x0, double y0)
 {
     J x = J::variable(0, x0), y = J::variable(1, y0);
     return oti::exp(x) + oti::exp(y) + 0.5 * (x * y);
@@ -58,9 +58,9 @@ int main(int argc, char** argv)
         int i = static_cast<int>(idx % G), j = static_cast<int>(idx / G);
         double x0 = -0.5 + 1.0 * i / (G - 1);
         double y0 = -0.5 + 1.0 * j / (G - 1);
-        J jet = make_jet(x0, y0);
-        if (v::is_trusted(jet, step, tau, 0.0, model_order)) ++local_trusted;
-        auto r = v::validity_radius(jet, tau, 0.0, model_order);   // multi-band bracket-and-bisection
+        J oti_number = make_oti_number(x0, y0);
+        if (v::is_trusted(oti_number, step, tau, 0.0, model_order)) ++local_trusted;
+        auto r = v::validity_radius(oti_number, tau, 0.0, model_order);   // multi-band bracket-and-bisection
         local_min_reach = std::min(local_min_reach, std::min(r[0], r[1]));
     }
 
@@ -70,7 +70,7 @@ int main(int argc, char** argv)
     MPI_Allreduce(&local_min_reach, &global_min_reach, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
 
     if (rank == 0) {
-        std::printf("np=%d  grid=%dx%d (%ld jets)  trusted=%ld  global_min_reach=%.17g\n",
+        std::printf("np=%d  grid=%dx%d (%ld OTI numbers)  trusted=%ld  global_min_reach=%.17g\n",
                     nprocs, G, G, total, total_trusted, global_min_reach);
     }
     MPI_Finalize();

@@ -5,7 +5,7 @@ These pages collect the library's worked numerical examples, in increasing
 order of realism: closed-form functions where every derivative can be checked
 against an exact formula, a finite-element heat equation where sensitivities
 are validated against finite differences, and three applications that use the
-jet from a single PDE solve as a local surrogate model -- parameter
+OTI number from a single PDE solve as a local surrogate model -- parameter
 perturbation, uncertainty quantification, and certified reuse in a
 digital-twin setting.
 
@@ -49,7 +49,7 @@ Two themes run through all of them:
      - certified surrogate reuse under parameter drift (validity gate)
    * - :doc:`digital_twin_gp`
      - ``otinum<3, 2>``
-     - Gaussian-process twin trained on jets (JetGP); what each derivative order buys
+     - Gaussian-process twin trained on OTI numbers (JetGP); what each derivative order buys
 
 The closed-form examples run through the Python bindings
 (:doc:`../tutorials/python_bindings`); their sources are in

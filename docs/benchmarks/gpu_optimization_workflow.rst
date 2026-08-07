@@ -50,7 +50,7 @@ Benchmark Programs
    operator apply (a stencil gather), the nodal update, and the consistent-mass
    solve, so the alignment effect can be read per kernel. The signal is
    in by-value OTI parameters, temporaries, and the generated-code/coalescing
-   behavior of scattered jet loads.
+   behavior of scattered OTI number loads.
 
 ``bench_layout``
    Question: for the same arithmetic and access pattern, should a kernel store
@@ -58,7 +58,7 @@ Benchmark Programs
 
    It compares AoS and SoA storage for both streaming and gather access
    patterns. Alignment is not the variant axis here. The gather case is
-   important because scattered stencil-like reads can favor one contiguous jet
+   important because scattered stencil-like reads can favor one contiguous OTI number
    load per neighbor over coefficient-major access.
 
 ``bench_fused``
@@ -356,7 +356,7 @@ generated CUDA register pressure. The metric is ``ns_per_node``, so lower is
 better.
 
 The benchmarked operations are the natural FE kernels of an explicit PDE time
-step in which every nodal value carries an OTI jet. Each kernel is a Kokkos
+step in which every nodal value carries an OTI number. Each kernel is a Kokkos
 ``parallel_for`` over the nodes, shown below as a ``KOKKOS_LAMBDA`` (the
 benchmark itself uses equivalent functors). Throughout, ``i`` is the node
 index, ``T`` is ``oti::otinum<M, N, Coeff>``, the fields ``u``, ``f``, ``Ku``
@@ -377,7 +377,7 @@ are ``Kokkos::View<T*>``, and ``mass`` is the scalar lumped mass
 
 ``stencil_gather``
    Matrix-free operator application ``y = K u`` over an 8x8 element stencil.
-   Each thread reads many scattered neighbor jets and scales them by scalar
+   Each thread reads many scattered neighbor OTI numbers and scales them by scalar
    stiffness weights, so this is the gather-bound kernel where aligned wide loads
    matter most.
 
@@ -387,7 +387,7 @@ are ``Kokkos::View<T*>``, and ``mass`` is the scalar lumped mass
           T sum = T(0);
           for (int elem = 0; elem < 8; ++elem)
               for (int col = 0; col < 8; ++col)
-                  sum += K(elem * 8 + col) * u(neighbor(i, elem, col));  // scalar * jet
+                  sum += K(elem * 8 + col) * u(neighbor(i, elem, col));  // scalar * OTI number
           Ku(i) = sum;
       });
 
@@ -486,11 +486,11 @@ for shapes that cannot reach a 16-byte boundary without padding.
 
 This benchmark isolates that wide-access benefit only for the scattered case. The
 contiguous-streaming case is not given its own kernel, because it is expected to
-be neutral: when adjacent threads read neighbouring jets in order, the warp
+be neutral: when adjacent threads read neighbouring OTI numbers in order, the warp
 already coalesces those accesses into wide transactions regardless of each
 object's individual alignment, as long as the array base is aligned (which Kokkos
 guarantees). It is the *scattered* gather, where each thread issues its own
-independently addressed jet load, that needs per-object promotion to issue as one
+independently addressed OTI number load, that needs per-object promotion to issue as one
 128-bit transaction. The three pointwise kernels below are the benchmark's
 contiguous case and bear this out -- they stay near neutral while the gather
 carries the speedup.
@@ -537,9 +537,9 @@ mathematical result. It only changes how friendly the array element address is
 to the backend, so its effect depends entirely on how a kernel touches memory.
 
 The GTX 1650 results bear that out kernel by kernel. The clear, repeatable
-signal is in the gather-bound operator apply, largest for the big jets and for
+signal is in the gather-bound operator apply, largest for the big OTI numbers and for
 the shapes promoted to a full 16-byte boundary (the ``float`` ``<3,1>`` and
-``<3,3>`` jets, which are exact 16-byte multiples):
+``<3,3>`` OTI numbers, which are exact 16-byte multiples):
 
 .. code-block:: text
 
@@ -549,13 +549,13 @@ the shapes promoted to a full 16-byte boundary (the ``float`` ``<3,1>`` and
      <3,3> double  83.34 -> 40.90  (2.04x)    float  27.72 ->  9.72  (2.85x)
 
 This is exactly where alignment should help: each thread issues many scattered
-neighbor-jet loads, so promoting the jet to a 16-byte boundary lets the backend
+neighbor OTI-number loads, so promoting the OTI number to a 16-byte boundary lets the backend
 coalesce them into wide 128-bit transactions. The pointwise kernels move far
 less memory per node and stay correspondingly closer to neutral. The nodal
-update picks up a more modest gather-like benefit at the largest jet
+update picks up a more modest gather-like benefit at the largest OTI number
 (``operator_chain_update`` at ``<3,3>`` is ``1.19x`` for double and ``1.98x``
 for float), while ``source_expression`` and ``mass_solve`` stay within noise of
-``1.00x`` except at the largest jets. As predicted by the shape table, the ``<4,1>``,
+``1.00x`` except at the largest OTI numbers. As predicted by the shape table, the ``<4,1>``,
 ``<8,1>``, and ``<16,1>`` control shapes show only sub-pattern jitter, because
 natural and aligned compile to identical layout there.
 
@@ -584,7 +584,7 @@ Layout
 ------
 
 ``bench_layout`` asks, for the same arithmetic, whether OTI values should be
-stored as an array-of-structs (``Kokkos::View<otinum*>``, each jet contiguous)
+stored as an array-of-structs (``Kokkos::View<otinum*>``, each OTI number contiguous)
 or coefficient-major as ``oti::soa_span`` (all coefficient-0 values, then all
 coefficient-1 values, and so on). One templated kernel drives both layouts
 through a common ``load``/``store`` surface, so only the storage changes. The
@@ -593,7 +593,7 @@ is better, and both layouts compute the same result. It measures two access
 patterns:
 
 ``stream``
-   A contiguous ``y = a*x + y`` over the jets -- the pure-coalescing question.
+   A contiguous ``y = a*x + y`` over the OTI numbers -- the pure-coalescing question.
 
    .. code-block:: cpp
 
@@ -606,8 +606,8 @@ patterns:
       });
 
 ``gather``
-   Each element sums 8 neighbor jets at scattered offsets, like a stencil
-   matvec. AoS reads each neighbor as one contiguous (possibly wide) jet; SoA
+   Each element sums 8 neighbor OTI numbers at scattered offsets, like a stencil
+   matvec. AoS reads each neighbor as one contiguous (possibly wide) OTI number; SoA
    reads it as ``ncoeffs`` coalesced loads.
 
    .. code-block:: cpp
@@ -626,16 +626,16 @@ patterns:
    :alt: Layout benchmark plot
    :width: 100%
 
-This is access-pattern guidance, not a universal rule. For small jets the two
+This is access-pattern guidance, not a universal rule. For small OTI numbers the two
 layouts are within noise in both patterns (``<3,1>`` and ``<2,2>`` sit at about
-``1.00x``). The decisive case is the large jet, where AoS coalescing collapses
+``1.00x``). The decisive case is the large OTI number, where AoS coalescing collapses
 but SoA stays coalesced: streaming ``<4,3,float>`` is about ``4.2x`` faster as
 SoA (``38 -> 158`` useful GB/s) and ``<4,3,double>`` about ``2.6x``; the gather
-shows the same at large jets (``<4,3,float>`` about ``4.1x``). But small and
-medium gathers favor AoS, because each neighbor is a single contiguous jet load:
+shows the same at large OTI numbers (``<4,3,float>`` about ``4.1x``). But small and
+medium gathers favor AoS, because each neighbor is a single contiguous OTI number load:
 ``<3,1,float>`` gather is about ``1.2x`` faster as AoS. So a gather-bound kernel
-over small jets is the one case where the contiguous AoS jet wins, even though
-the streaming advice for large jets points the other way at SoA.
+over small OTI numbers is the one case where the contiguous AoS OTI number wins, even though
+the streaming advice for large OTI numbers points the other way at SoA.
 
 Fused Operations
 ----------------
@@ -651,14 +651,14 @@ axis is ``chain`` vs ``fused`` over two patterns:
    ``t = a*x + t``  versus  ``oti::axpy(t, a, x)`` (``a`` a scalar).
 
 ``fma``
-   ``t = t + x*y``  versus  ``oti::fma_into(t, x, y)`` (``x``, ``y`` both jets).
+   ``t = t + x*y``  versus  ``oti::fma_into(t, x, y)`` (``x``, ``y`` both OTI numbers).
 
 .. image:: ../_static/benchmarks/bench_fused.png
    :alt: Fused operation benchmark plot
    :width: 100%
 
-``axpy`` is essentially neutral everywhere (about ``1.00x``): a scalar-times-jet
-plus a jet leaves little temporary traffic to remove. The library's third helper,
+``axpy`` is essentially neutral everywhere (about ``1.00x``): a scalar-times-OTI-number
+plus an OTI number leaves little temporary traffic to remove. The library's third helper,
 ``scale_add`` (which returns ``a + s*b`` instead of accumulating in place), is the
 same scalar-scaled add and is not given its own variant for that reason -- it
 lands in the same neutral bucket as ``axpy``, which represents it here. The
@@ -666,7 +666,7 @@ multiply-accumulate
 ``fma`` is where fusing pays, because ``fma_into`` eliminates the ``x*y`` product
 temporary: on the GTX 1650 it is about ``1.40x`` faster at ``<3,1,double>``,
 ``1.36x`` at ``<2,2>`` and ``<3,2>``, easing to about ``1.2x`` for the larger
-jets and toward neutral by ``<4,4>``, where the per-op arithmetic dwarfs the one
+OTI numbers and toward neutral by ``<4,4>``, where the per-op arithmetic dwarfs the one
 saved temporary. ``float`` follows the same curve. So reach for ``fma_into`` in
 repeated multiply-accumulate kernels; ``axpy`` is a readability helper, not a
 speedup.
@@ -680,26 +680,26 @@ runtime table walk where the algebra is large enough for that overhead to
 matter.
 
 The alignment plot is read kernel by kernel, not as one number: the conditional
-alignment rule pays off where a kernel issues scattered jet loads -- the
-matrix-free operator apply, largest for big jets and shapes promoted to a full
+alignment rule pays off where a kernel issues scattered OTI number loads -- the
+matrix-free operator apply, largest for big OTI numbers and shapes promoted to a full
 16-byte boundary -- while the pointwise source, update, and mass-solve kernels
 stay near neutral.
 
 The layout plot explains why SoA is not automatically faster. Coefficient-major
 storage can improve coalescing for streaming larger coefficient arrays, while
 small scattered gathers may still prefer AoS because each neighbor is loaded as
-one contiguous jet.
+one contiguous OTI number.
 
 The fused-operation plot measures expression shape rather than algebra table
 construction. ``fma_into`` is most relevant to repeated multiply-accumulate
 kernels, while ``axpy`` measures essentially neutral.
 
-Read together, the four plots split by kernel regime rather than competing. Jet
+Read together, the four plots split by kernel regime rather than competing. OTI-number
 size and access pattern decide which lever even applies. For large, memory-bound
-jets the gains come from the memory optimizations -- alignment on scattered
+OTI numbers the gains come from the memory optimizations -- alignment on scattered
 gathers and the AoS/SoA layout choice on streaming -- with arithmetic unrolling
-amortizing the larger product table. For small, compute-bound jets the memory
-path is already efficient (small jets are aligned and coalesce well), so the
+amortizing the larger product table. For small, compute-bound OTI numbers the memory
+path is already efficient (small OTI numbers are aligned and coalesce well), so the
 remaining lever is removing arithmetic temporaries with ``fma_into`` -- which is
 exactly why it pays at ``<3,1>`` and ``<2,2>`` and fades to neutral by ``<4,4>``.
 A kernel's shape therefore tells you which plot to read first.

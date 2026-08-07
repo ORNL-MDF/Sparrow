@@ -1,5 +1,5 @@
 // Minimal MPI + OTI toy: evaluate a function over a 2D grid, embarrassingly
-// parallel (NO ghost nodes, NO halo exchange), then gather every jet back to
+// parallel (NO ghost nodes, NO halo exchange), then gather every OTI number back to
 // rank 0 using a *committed* MPI datatype for one otinum.
 //
 // The point of this toy is to validate exactly one thing: that MPI can move an
@@ -24,18 +24,18 @@
 
 // ---- problem definition ----------------------------------------------------
 
-using Jet = oti::otinum<2, 2, double>;   // value + grad + Hessian w.r.t. (x, y)
+using OTINumber = oti::otinum<2, 2, double>;   // value + grad + Hessian w.r.t. (x, y)
 static constexpr int N = 1000;           // grid is N x N
 static constexpr long TOTAL = static_cast<long>(N) * N;
 
 // Map a flat global index to physical coords on the unit square, then evaluate
-// f(x,y) = sin(x) * exp(y) with x,y seeded as infinitesimals. The returned jet
+// f(x,y) = sin(x) * exp(y) with x,y seeded as infinitesimals. The returned OTI number
 // carries f and all of its first/second Taylor coefficients at that point.
 //
 // This is plain single-process OTI math -- MPI never sees inside it. Serial
 // reference and parallel workers call the SAME function, so results are
 // bit-identical and we can verify with memcmp.
-static Jet evaluate(long global_index)
+static OTINumber evaluate(long global_index)
 {
     const double h = 1.0 / (N - 1);
     const long i = global_index / N;     // row
@@ -43,8 +43,8 @@ static Jet evaluate(long global_index)
     const double x0 = i * h;
     const double y0 = j * h;
 
-    Jet x = Jet::variable(0, x0);        // x0 + e_0
-    Jet y = Jet::variable(1, y0);        // y0 + e_1
+    OTINumber x = OTINumber::variable(0, x0);        // x0 + e_0
+    OTINumber y = OTINumber::variable(1, y0);        // y0 + e_1
     return oti::sin(x) * oti::exp(y);
 }
 
@@ -69,25 +69,25 @@ int main(int argc, char** argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    // ---- 1. commit the OTI datatype: one jet == ncoeffs contiguous doubles --
-    // make_datatype<Jet>() builds + commits MPI_Type_contiguous(ncoeffs, MPI_DOUBLE)
-    // and static_asserts the jet is tightly packed -- consumers don't re-roll it.
-    MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<Jet>();
+    // ---- 1. commit the OTI datatype: one OTI number == ncoeffs contiguous doubles --
+    // make_datatype<OTI number>() builds + commits MPI_Type_contiguous(ncoeffs, MPI_DOUBLE)
+    // and static_asserts the OTI number is tightly packed -- consumers don't re-roll it.
+    MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<OTINumber>();
 
     // ---- 2. each rank evaluates its own slice into a local buffer ----------
     long start = 0, count = 0;
     block_range(rank, size, start, count);
 
-    std::vector<Jet> local_buf(static_cast<size_t>(count));
+    std::vector<OTINumber> local_buf(static_cast<size_t>(count));
     for (long k = 0; k < count; ++k) {
         local_buf[static_cast<size_t>(k)] = evaluate(start + k);
     }
 
-    // ---- 3. gather every jet back to rank 0 --------------------------------
+    // ---- 3. gather every OTI number back to rank 0 --------------------------------
     // Counts/displacements are in units of MPI_OTINUM -- no byte arithmetic.
     // (Reduces to a plain MPI_Gather when size divides TOTAL evenly.)
     std::vector<int> recvcounts, displs;
-    std::vector<Jet> global_buf;
+    std::vector<OTINumber> global_buf;
     if (rank == 0) {
         recvcounts.resize(static_cast<size_t>(size));
         displs.resize(static_cast<size_t>(size));
@@ -110,17 +110,17 @@ int main(int argc, char** argv)
     if (rank == 0) {
         long mismatches = 0;
         for (long g = 0; g < TOTAL; ++g) {
-            Jet ref = evaluate(g);
+            OTINumber ref = evaluate(g);
             if (std::memcmp(&ref, &global_buf[static_cast<size_t>(g)],
-                            sizeof(Jet)) != 0) {
+                            sizeof(OTINumber)) != 0) {
                 ++mismatches;
             }
         }
 
-        // Show one sample jet (grid centre) with its named Taylor coefficients
-        // so it's visible the gather moved the *whole* jet, not just the value.
+        // Show one sample OTI number (grid centre) with its named Taylor coefficients
+        // so it's visible the gather moved the *whole* OTI number, not just the value.
         const long mid = (TOTAL / 2) + (N / 2);
-        const Jet& s = global_buf[static_cast<size_t>(mid)];
+        const OTINumber& s = global_buf[static_cast<size_t>(mid)];
         std::printf("ranks            : %d\n", size);
         std::printf("grid             : %d x %d  (%ld points)\n", N, N, TOTAL);
         std::printf("sample @ index %ld (centre):\n", mid);
@@ -133,7 +133,7 @@ int main(int argc, char** argv)
                     s.coeff(oti::sparse({{0, 1}, {1, 1}})));
         std::printf("  d2/dy2(Taylor) = % .8f  (= f_yy / 2)\n",
                     s.coeff(oti::sparse({{1, 2}})));
-        std::printf("verify vs serial : %s (%ld mismatching jets)\n",
+        std::printf("verify vs serial : %s (%ld mismatching OTI numbers)\n",
                     mismatches == 0 ? "PASS (bit-exact)" : "FAIL", mismatches);
     }
 

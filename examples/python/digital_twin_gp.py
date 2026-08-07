@@ -1,15 +1,15 @@
-"""GP digital twin from OTI jets: what a derivative-enhanced anchor buys.
+"""GP digital twin from OTI numbers: what a derivative-enhanced anchor buys.
 
-Runs two experiments against the precomputed jet bank in ``data/gp_bank/``
+Runs two experiments against the precomputed OTI number bank in ``data/gp_bank/``
 (exported by ``uq_gp_bank.cpp`` on the heat-equation analysis fork; see the
 "Digital Twin II" page of the documentation), comparing four surrogates of the
 final-time sensor temperature over the 3-D parameter box (alpha, A, sigma):
 
   value GP      one observation per anchor solve (the QoI value)
-  order-1 jetGP + exact gradient           (4 observations per solve)
-  order-2 jetGP + exact Hessian, mixed too (10 observations per solve)
-  Taylor        second-order Taylor evaluation from the NEAREST anchor jet
-                (jet data without probabilistic fusion)
+  order-1 JetGP + exact gradient           (4 observations per solve)
+  order-2 JetGP + exact Hessian, mixed too (10 observations per solve)
+  Taylor        second-order Taylor evaluation from the NEAREST anchor OTI number
+                (OTI number data without probabilistic fusion)
 
 Experiment 1 (convergence): the four surrogates trained on the same nested
 Halton anchor sequence, errors measured against 400 Monte Carlo truth solves;
@@ -18,11 +18,11 @@ reports the number of anchor solves each needs to reach the error tolerance.
 Experiment 2 (twin loop): a drifting-parameter query stream (closed path,
 traversed 1.5x so late queries REVISIT early territory), served by four twins.
 The Taylor-atlas twin is the certified twin of the companion docs page: every
-anchor jet is kept, each query is served by the nearest one under the order-2
+anchor OTI number is kept, each query is served by the nearest one under the order-2
 validity gate. The GP twins fuse ALL anchors into one posterior and re-solve
 when its standard deviation at the query exceeds the same tolerance.
 
-Requires jetgp (https://github.com/Samm-Py/jetgp) and its environment; the
+Requires JetGP (https://github.com/Samm-Py/jetgp) and its environment; the
 figures committed under figures/digital_twin_gp/ were produced by this script,
 so the documentation does not require jetgp to build.
 
@@ -58,14 +58,14 @@ plt.rcParams.update({
 })
 
 # ---------------------------------------------------------------------------
-# Bank loading. Column order of the jet blocks matches uq_gp_bank.cpp:
+# Bank loading. Column order of the OTI number blocks matches uq_gp_bank.cpp:
 # q, dq/da, dq/dA, dq/ds, d2q/da2, d2q/dadA, d2q/dads, d2q/dA2, d2q/dAds, d2q/ds2
 # ---------------------------------------------------------------------------
 
-JET_COLS = ["q", "dq_da", "dq_dA", "dq_ds",
-            "d2q_da2", "d2q_dadA", "d2q_dads", "d2q_dA2", "d2q_dAds", "d2q_ds2"]
+OTI_NUMBER_COLS = ["q", "dq_da", "dq_dA", "dq_ds",
+                   "d2q_da2", "d2q_dadA", "d2q_dads", "d2q_dA2", "d2q_dAds", "d2q_ds2"]
 
-# jetgp derivative multi-indices for the same order (1-indexed variables)
+# JetGP derivative multi-indices for the same order (1-indexed variables)
 DER_INDICES_O1 = [[[[1, 1]], [[2, 1]], [[3, 1]]]]
 DER_INDICES_O2 = DER_INDICES_O1 + [[[[1, 2]], [[1, 1], [2, 1]], [[1, 1], [3, 1]],
                                     [[2, 2]], [[2, 1], [3, 1]], [[3, 2]]]]
@@ -96,7 +96,7 @@ def unit(x):
     return (x - LO) / SPAN
 
 
-def jet_rows(rows):
+def oti_number_rows(rows):
     """Extract (X, value, grad, hess) in UNIT-box coordinates from bank rows."""
     x = unit(np.column_stack([rows["alpha"], rows["amplitude"], rows["sigma"]]))
     q = rows["q"]
@@ -162,9 +162,9 @@ def taylor_predict(x_test, xa, qa, ga, ha):
 # ---------------------------------------------------------------------------
 
 def experiment_convergence():
-    xa, qa, ga, ha = jet_rows(ANCHORS)
+    xa, qa, ga, ha = oti_number_rows(ANCHORS)
     xt = unit(X_MC)
-    results = {"value GP": [], "order-1 jet GP": [], "order-2 jet GP": [],
+    results = {"value GP": [], "order-1 OTI number GP": [], "order-2 OTI number GP": [],
                "nearest-anchor Taylor": []}
     for k in ANCHOR_COUNTS:
         sl = slice(0, k)
@@ -175,12 +175,12 @@ def experiment_convergence():
         m, p = train_gp(xa[sl], qa[sl], ga[sl], ha[sl])
         e2 = gp_predict(m, p, xt) - Q_MC
         et = taylor_predict(xt, xa[sl], qa[sl], ga[sl], ha[sl]) - Q_MC
-        for key, e in [("value GP", e0), ("order-1 jet GP", e1),
-                       ("order-2 jet GP", e2), ("nearest-anchor Taylor", et)]:
+        for key, e in [("value GP", e0), ("order-1 OTI number GP", e1),
+                       ("order-2 OTI number GP", e2), ("nearest-anchor Taylor", et)]:
             results[key].append((np.sqrt(np.mean(e ** 2)), np.max(np.abs(e))))
         print(f"k={k:3d}  rms: value {results['value GP'][-1][0]:.2e}  "
-              f"o1 {results['order-1 jet GP'][-1][0]:.2e}  "
-              f"o2 {results['order-2 jet GP'][-1][0]:.2e}  "
+              f"o1 {results['order-1 OTI number GP'][-1][0]:.2e}  "
+              f"o2 {results['order-2 OTI number GP'][-1][0]:.2e}  "
               f"taylor {results['nearest-anchor Taylor'][-1][0]:.2e}")
     return results
 
@@ -189,15 +189,15 @@ def experiment_convergence():
 # Experiment 2: the twin loop on the drift path
 # ---------------------------------------------------------------------------
 
-def drift_jets():
-    return jet_rows(DRIFT)
+def drift_oti_numbers():
+    return oti_number_rows(DRIFT)
 
 
 def twin_loop_gp(order):
     """Variance-gated adaptive GP twin: seeded with the first two queries (a
     one-point GP cannot estimate its own scales), then re-solve (and remember)
     whenever the posterior std at the query exceeds TOL."""
-    xd, qd, gd, hd = drift_jets()
+    xd, qd, gd, hd = drift_oti_numbers()
     anchors = [0, 1]
     preds = np.empty(len(xd))
     solves = np.zeros(len(xd), dtype=bool)
@@ -240,10 +240,10 @@ def _taylor_gate_predict(xq, xd, qd, gd, hd, anchor):
 
 
 def twin_loop_taylor_atlas():
-    """The certified Taylor twin of the companion docs page: every anchor jet
+    """The certified Taylor twin of the companion docs page: every anchor OTI number
     is kept, each query is served by the nearest stored anchor under the
-    order-2 gate. Jet data without probabilistic fusion."""
-    xd, qd, gd, hd = drift_jets()
+    order-2 gate. OTI number data without probabilistic fusion."""
+    xd, qd, gd, hd = drift_oti_numbers()
     preds = np.empty(len(xd))
     solves = np.zeros(len(xd), dtype=bool)
     atlas = [0]
@@ -266,8 +266,8 @@ def twin_loop_taylor_atlas():
 
 STYLE = {
     "value GP": dict(color="#888888", marker="o"),
-    "order-1 jet GP": dict(color="#1f77b4", marker="s"),
-    "order-2 jet GP": dict(color="#d62728", marker="^"),
+    "order-1 OTI number GP": dict(color="#1f77b4", marker="s"),
+    "order-2 OTI number GP": dict(color="#d62728", marker="^"),
     "nearest-anchor Taylor": dict(color="#2ca02c", marker="d"),
     "Taylor atlas": dict(color="#2ca02c", marker="d"),
 }
@@ -331,8 +331,8 @@ def main():
     print("\n=== experiment 2: twin loop on the drift path ===")
     runs = {}
     runs["Taylor atlas"] = twin_loop_taylor_atlas()
-    for key, order in [("value GP", 0), ("order-1 jet GP", 1),
-                       ("order-2 jet GP", 2)]:
+    for key, order in [("value GP", 0), ("order-1 OTI number GP", 1),
+                       ("order-2 OTI number GP", 2)]:
         runs[key] = twin_loop_gp(order)
     figure_twin_loop(runs)
     print(f"{'twin':24s} {'solves':>7s} {'max |err|':>11s} {'mean |err|':>11s}")

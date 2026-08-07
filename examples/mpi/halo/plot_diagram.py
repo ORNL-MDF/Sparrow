@@ -2,10 +2,10 @@
 """Generic OTI_M^N halo-exchange schematic for the Jacobi tutorial.
 
 A 2D process decomposition (2x2) of the structured grid, extended into an oblique
-stack using the same visual grammar as toy/plot_jet_slices.py. The value,
+stack using the same visual grammar as toy/plot_oti_number_slices.py. The value,
 individual first-order directions, and representative higher-order groups are
 shown as separate planes. Every grid cell carries the complete tower, so a halo
-exchange ships one whole OTI_M^N jet per ghost cell.
+exchange ships one whole OTI_M^N OTI number per ghost cell.
 
 The top layer is annotated with the four-neighbour exchange:
   * N<->S (between vertically adjacent ranks): a row is CONTIGUOUS in memory
@@ -240,10 +240,10 @@ def main(out_path="mpi_halo.png"):
              r"$\mathbf{E\!\leftrightarrow\!W}$  column halo — strided "
              "(MPI_Type_vector)", fontsize=10.5, ha="center", color=EW_COLOR)
 
-    # the unifying note: stack depth = the jet
+    # the unifying note: stack depth = the OTI number
     bx, by = corner(0.0, 0.0, 0.0, x0)
     ax.annotate("one ghost cell ="
-                "\none complete " r"$\mathrm{OTI}_M^N$ jet"
+                "\none complete " r"$\mathrm{OTI}_M^N$ OTI number"
                 "\n(one MPI_OTINUM)",
                 xy=(corner(0.0, 0.0, top_z, x0)[0],
                     corner(0.0, 0.0, top_z / 2, x0)[1]),

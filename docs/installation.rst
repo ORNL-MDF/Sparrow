@@ -222,7 +222,7 @@ loop for local development.
 Each ``tests/test_*.cpp`` file covers one area of the scalar library —
 construction and coefficient access, arithmetic, elementary functions,
 comparisons, edge cases, ``float`` coefficients, standard-library
-interoperability, jet validity analysis — and the file names state their
+interoperability, OTI number validity analysis — and the file names state their
 scope, so the test list in the runner's output doubles as a feature inventory.
 
 The ``*_kokkos`` tests are the exception: ``test_kokkos_smoke.cpp`` and

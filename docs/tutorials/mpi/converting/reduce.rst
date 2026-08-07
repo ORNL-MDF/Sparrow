@@ -42,27 +42,27 @@ The Changes
    -using Scalar = double;
    +#include "otinum/otinum.hpp"                    // 1. otinum core
    +#include "otinum/mpi.hpp"                        //    datatype + reduction op
-   +using Jet = oti::otinum<2, 2, double>;           // 2. two directions, order two
+   +using OTINumber = oti::otinum<2, 2, double>;           // 2. two directions, order two
 
     // design parameters
    -const Scalar a = A0;
    -const Scalar b = B0;
-   +const Jet a = Jet::variable(0, A0);              // 3. seed a = A0 + e_0
-   +const Jet b = Jet::variable(1, B0);              //    seed b = B0 + e_1
+   +const OTINumber a = OTINumber::variable(0, A0);              // 3. seed a = A0 + e_0
+   +const OTINumber b = OTINumber::variable(1, B0);              //    seed b = B0 + e_1
 
     // partial sum over this rank's block -- THE LOOP DOES NOT CHANGE
    -Scalar local = 0.0;
-   +Jet local(0.0);
+   +OTINumber local(0.0);
     for (long k = 0; k < count; ++k) local += field(start + k, a, b);
 
    +// 4. one datatype + one reduction op, both from the header
-   +MPI_Datatype MPI_OTINUM  = oti::mpi::make_datatype<Jet>();
-   +MPI_Op       MPI_OTI_SUM = oti::mpi::make_sum_op<Jet>();
+   +MPI_Datatype MPI_OTINUM  = oti::mpi::make_datatype<OTINumber>();
+   +MPI_Op       MPI_OTI_SUM = oti::mpi::make_sum_op<OTINumber>();
 
    -MPI_Allreduce(&local, &global, 1, MPI_DOUBLE, MPI_SUM,     MPI_COMM_WORLD);
    +MPI_Allreduce(&local, &global, 1, MPI_OTINUM, MPI_OTI_SUM, MPI_COMM_WORLD);
 
-   +// 5. read the derivatives out of the reduced jet
+   +// 5. read the derivatives out of the reduced OTI number
    +const double d_da = qoi.coeff(oti::sparse({{0, 1}}));   // dQoI/da
    +const double d_db = qoi.coeff(oti::sparse({{1, 1}}));   // dQoI/db
    +//   plus the three second-order coefficients -- the Hessian
@@ -76,10 +76,10 @@ What each change is for:
    reduction code works the same for any ``otinum<M, N, Coeff>``.
 #. **Seed the design parameters** as variables -- the one new line of intent,
    declaring what you want sensitivities with respect to.
-#. **Describe the element and the combine to MPI.** ``make_datatype<Jet>()``
-   replaces ``MPI_DOUBLE``; ``make_sum_op<Jet>()`` replaces ``MPI_SUM``. The
+#. **Describe the element and the combine to MPI.** ``make_datatype<OTINumber>()``
+   replaces ``MPI_DOUBLE``; ``make_sum_op<OTINumber>()`` replaces ``MPI_SUM``. The
    ``Allreduce`` call is otherwise identical.
-#. **Read the derivatives out** of the reduced jet with ``coeff()``.
+#. **Read the derivatives out** of the reduced OTI number with ``coeff()``.
 
 The summation loop and the decomposition are unchanged: the overloaded ``+=``
 carries the derivatives through the same code.
@@ -101,9 +101,9 @@ root. ``count=1`` with ``MPI_DOUBLE`` gives one scalar; ``count=1`` with
 
 .. code-block:: cpp
 
-   std::vector<Jet> local(n), global(n);
-   MPI_Datatype MPI_OTINUM  = oti::mpi::make_datatype<Jet>();
-   MPI_Op       MPI_OTI_SUM = oti::mpi::make_sum_op<Jet>();
+   std::vector<OTINumber> local(n), global(n);
+   MPI_Datatype MPI_OTINUM  = oti::mpi::make_datatype<OTINumber>();
+   MPI_Op       MPI_OTI_SUM = oti::mpi::make_sum_op<OTINumber>();
 
    MPI_Allreduce(local.data(), global.data(),
                  static_cast<int>(local.size()),
@@ -114,7 +114,7 @@ root. ``count=1`` with ``MPI_DOUBLE`` gives one scalar; ``count=1`` with
 
 Element ``global[i]`` is the reduction of ``local[i]`` across ranks. If each rank
 has a variable number of local OTI values that should first be accumulated into
-one global QoI, keep the local C++ loop and reduce the resulting single ``Jet``.
+one global QoI, keep the local C++ loop and reduce the resulting single ``OTINumber``.
 If the variable-length values are separate global entries, first put them into a
 matching global layout, or use the appropriate variable-count movement collective
 before reducing.
@@ -124,7 +124,7 @@ before reducing.
    ``Allreduce`` is a choice, not a requirement. The custom ``MPI_Op`` is
    orthogonal to the collective -- it works unchanged with ``MPI_Reduce``
    (result on root only), ``MPI_Reduce_scatter``, and the rest. Use
-   ``MPI_Allreduce`` when *every* rank needs the reduced jet (e.g. an
+   ``MPI_Allreduce`` when *every* rank needs the reduced OTI number (e.g. an
    optimisation step where all ranks update the design parameters from the
    reduced coefficients, as here); use the cheaper ``MPI_Reduce(..., root,
    ...)`` when only one rank consumes the QoI and its sensitivities (logging,
@@ -142,7 +142,7 @@ it:
 
 .. code-block:: cpp
 
-   MPI_Op MPI_OTI_SUM = oti::mpi::make_sum_op<Jet>();   // build + commit
+   MPI_Op MPI_OTI_SUM = oti::mpi::make_sum_op<OTINumber>();   // build + commit
    // ... use in MPI_Reduce / MPI_Allreduce over MPI_OTINUM ...
    oti::mpi::free_op(MPI_OTI_SUM);                       // release
 
@@ -151,30 +151,30 @@ adapts any stateless combine functor ``Op`` to the fixed MPI callback shape:
 
 .. code-block:: cpp
 
-   struct add_jets { template <class T> T operator()(T const& a, T const& b) const { return a + b; } };
+   struct add_oti_numbers { template <class T> T operator()(T const& a, T const& b) const { return a + b; } };
 
    template <class T, class Op>
    void reduce_fn(void* in, void* inout, int* len, MPI_Datatype*) {
        const T* a = static_cast<const T*>(in);
        T*       b = static_cast<T*>(inout);
-       for (int i = 0; i < *len; ++i) b[i] = Op{}(a[i], b[i]);   // Op = the jet math
+       for (int i = 0; i < *len; ++i) b[i] = Op{}(a[i], b[i]);   // Op = the OTI number math
    }
-   // make_sum_op<T>() == make_reduce_op<T, add_jets>()
+   // make_sum_op<T>() == make_reduce_op<T, add_oti_numbers>()
 
-That loop is **not** re-defining jet addition: ``Op{}(a[i], b[i])`` *is*
+That loop is **not** re-defining OTI number addition: ``Op{}(a[i], b[i])`` *is*
 ``otinum::operator+`` (for the sum combine). It is there because MPI's reduction
 callback is type-erased and buffer-oriented -- MPI hands the operator two raw
 ``void*`` buffers of ``*len`` elements at once, so the function casts them to
-``Jet*`` and applies the already-defined arithmetic across the batch. (``*len``
+``OTINumber*`` and applies the already-defined arithmetic across the batch. (``*len``
 is 1 for a single QoI, but MPI may batch many elements per call, so the loop is
-required.) That glue is exactly what the header writes once, for every jet shape.
+required.) That glue is exactly what the header writes once, for every OTI number shape.
 
 .. note::
 
-   For a **sum**, jet addition is coefficient-wise, so this reduction is
-   equivalent to an ``MPI_SUM`` over the ``ncoeffs`` raw doubles of each jet -- you
+   For a **sum**, OTI number addition is coefficient-wise, so this reduction is
+   equivalent to an ``MPI_SUM`` over the ``ncoeffs`` raw doubles of each OTI number -- you
    could skip the custom op. It is the *general* mechanism: required the moment the
-   combine is not coefficient-wise (reducing a **product** of jets, where
+   combine is not coefficient-wise (reducing a **product** of OTI numbers, where
    ``operator*`` is a convolution that mixes coefficients), and it keeps the
    reduction expressed in ``MPI_OTINUM`` units.
 
@@ -185,16 +185,16 @@ Other Reductions
 on ``make_reduce_op``:
 
 * ``make_sum_op<T>()`` -- an additive QoI (all coefficients of a global sum).
-* ``make_prod_op<T>()`` -- a multiplicative QoI. Jet ``operator*`` is a
+* ``make_prod_op<T>()`` -- a multiplicative QoI. ``OTINumber::operator*`` is a
   convolution, so this genuinely *cannot* be done with ``MPI_SUM`` over the raw
   coefficients -- the clearest case for a custom op.
 * ``make_maxloc_op<T>()`` / ``make_minloc_op<T>()`` -- the largest / smallest
-  field value together with its complete jet and location. These operate on
+  field value together with its complete OTI number and location. These operate on
   ``oti::mpi::value_loc<T>`` and resolve exact value ties by the smaller location,
   matching ``MPI_MAXLOC`` / ``MPI_MINLOC`` semantics.
 
 For any other associative combine, pass your own functor:
-``oti::mpi::make_reduce_op<Jet, MyCombine>()``. The confidence test
+``oti::mpi::make_reduce_op<OTINumber, MyCombine>()``. The confidence test
 ``examples/mpi/reduce/test_reduce_ops.cpp`` checks all four shipped operators -- value
 and derivatives -- against a serial recompute.
 
@@ -202,14 +202,14 @@ An extremum reduction uses a matching value-plus-location datatype:
 
 .. code-block:: cpp
 
-   using LocatedJet = oti::mpi::value_loc<Jet>;
+   using LocatedOTINumber = oti::mpi::value_loc<OTINumber>;
 
-   LocatedJet local{local_jet, global_index};
-   LocatedJet global;
+   LocatedOTINumber local{local_oti_number, global_index};
+   LocatedOTINumber global;
 
    MPI_Datatype MPI_OTINUM_LOC =
-       oti::mpi::make_value_loc_datatype<Jet>();
-   MPI_Op MPI_OTI_MAXLOC = oti::mpi::make_maxloc_op<Jet>();
+       oti::mpi::make_value_loc_datatype<OTINumber>();
+   MPI_Op MPI_OTI_MAXLOC = oti::mpi::make_maxloc_op<OTINumber>();
 
    MPI_Allreduce(&local, &global, 1, MPI_OTINUM_LOC,
                  MPI_OTI_MAXLOC, MPI_COMM_WORLD);
@@ -273,7 +273,7 @@ Operator Confidence Test
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``test_reduce_ops.cpp`` exercises the generic reduction callback beyond this one
-QoI. Each rank contributes an array of three jets, forcing the callback's
+QoI. Each rank contributes an array of three OTI numbers, forcing the callback's
 ``len > 1`` path, and the program checks ``sum``, ``product``, ``maximum with
 location``, and ``minimum with location`` against a serial recompute. One array
 element deliberately ties in value across all ranks while carrying different
@@ -298,7 +298,7 @@ that ``MPI_Reduce`` and ``MPI_Allreduce`` agree on root to tolerance:
      sample[0]: sum=2.6000 (d=10.0)  prod=0.168000 (d=2.4560)  max=0.8000 at rank 3 (d=4.0)
      tie[2]: maxloc rank=0, minloc rank=0 (expected 0)
 
-This separates two questions: whether the OTI operators combine jets correctly,
+This separates two questions: whether the OTI operators combine OTI numbers correctly,
 and whether a particular QoI happens to use the sum operator.
 
 Derivative Accuracy Across Rank Counts
@@ -306,7 +306,7 @@ Derivative Accuracy Across Rank Counts
 
 ``main.cpp`` applies three independent checks:
 
-* **Distributed vs serial OTI** compares all six jet coefficients against a
+* **Distributed vs serial OTI** compares all six OTI number coefficients against a
   single-process recompute. This isolates reduction-order rounding.
 * **Closed-form derivatives** compare the value, both gradient entries, and all
   three normalized Hessian coefficients against direct analytical formulas
@@ -371,7 +371,7 @@ becomes overhead- and bandwidth-limited.
 
 The right panel isolates the latency of reducing one QoI. It stays in the
 microsecond range, versus hundreds of milliseconds for the OTI accumulation, so
-one global jet reduction is negligible in this workload. The curve is not
+one global OTI number reduction is negligible in this workload. The curve is not
 monotonic: collective algorithms, process placement, and the local MPI runtime
 can change abruptly with rank count (the 2-rank OTI point is a reproducible local
 outlier). Treat these numbers as a worked measurement method, not portable

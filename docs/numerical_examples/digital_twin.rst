@@ -1,7 +1,7 @@
 Digital Twin: Certified Surrogate Reuse
 =======================================
 
-The :doc:`surrogate` example showed that a jet from one solve predicts the
+The :doc:`surrogate` example showed that an OTI number from one solve predicts the
 solution at nearby parameters; it left open *how near is near enough*. This
 example closes that loop with the library's validity layer
 (:doc:`../tutorials/validity`) and uses it the way a digital twin needs it:
@@ -19,11 +19,11 @@ temperature at a fixed sensor location. Re-solving the PDE for every update is
 the honest but expensive answer; reusing an old solve blindly is cheap but
 uncertified.
 
-The adaptive strategy keeps an **atlas of anchor jets** -- each anchor is one
+The adaptive strategy keeps an **atlas of anchor OTI numbers** -- each anchor is one
 solve with ``otinum<3, 2>``, whose first-order coefficient is the surrogate
 model and whose second-order coefficient feeds the truncation-error
 estimate. A certified twin must never re-solve territory it has already
-certified, so every anchor is kept forever (a jet is ten doubles), each query
+certified, so every anchor is kept forever (an OTI number is ten doubles), each query
 is served by the nearest one, and a new solve happens only when **no** stored
 anchor's trusted region covers the query:
 
@@ -31,17 +31,17 @@ anchor's trusted region covers the query:
 
    namespace val = oti::validity;
 
-   auto k = nearest_anchor(alpha_q);            // nearest stored anchor jet
+   auto k = nearest_anchor(alpha_q);            // nearest stored anchor OTI number
    h = {alpha_q - atlas_alpha[k], 0.0, 0.0};    // offset per seeded variable
-   if (!val::is_trusted(atlas_jet[k], h, tau, /*tau_abs=*/0.0, /*order=*/1)) {
+   if (!val::is_trusted(atlas_oti_number[k], h, tau, /*tau_abs=*/0.0, /*order=*/1)) {
        // nothing certified covers this query: solve once, KEEP the anchor
        k = add_anchor(alpha_q);
        h = {0.0, 0.0, 0.0};
    }
-   q = val::evaluate(atlas_jet[k], h, /*order=*/1);   // no solve on reuse
+   q = val::evaluate(atlas_oti_number[k], h, /*order=*/1);   // no solve on reuse
 
 The trailing argument is the certified model order: the reused prediction is
-the *linear* model, and the jet's order-2 term is what prices its truncation
+the *linear* model, and the OTI number's order-2 term is what prices its truncation
 error. ``is_trusted`` compares that estimate at offset ``h`` against the
 budget ``tau`` -- the same one-order-above machinery described in the validity
 tutorial, applied per query at negligible cost.
@@ -85,7 +85,7 @@ library: see :doc:`../tutorials/validity`.
 
 The atlas also makes returning cheap: a query inside *any* stored anchor's
 trusted region costs nothing, no matter how long ago that anchor was solved.
-:doc:`digital_twin_gp` takes the same jets one step further -- fusing all
+:doc:`digital_twin_gp` takes the same OTI numbers one step further -- fusing all
 anchors into a single global Gaussian-process surrogate over all three
 parameters -- and quantifies what each derivative order is worth in PDE
 solves.

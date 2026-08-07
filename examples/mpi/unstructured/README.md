@@ -20,7 +20,7 @@ values.
 
 The two sources carry their value as **seeded variables** (`A = e_0`, `B = e_1`),
 so every converged node drags along `d(value)/dA` and `d(value)/dB` — the source
-sensitivity of the whole field, from a single solve. The jet is
+sensitivity of the whole field, from a single solve. The OTI number is
 `oti::otinum<2, 1, double>` (value + two first derivatives).
 
 Because the map is linear and both sources sit at 1.0, every node satisfies
@@ -28,8 +28,8 @@ Because the map is linear and both sources sit at 1.0, every node satisfies
 
 ## The MPI-specific surface
 
-One derived datatype **per neighbour**, built on the committed jet element
-(`oti::mpi::make_datatype<Jet>()`):
+One derived datatype **per neighbour**, built on the committed OTI number element
+(`oti::mpi::make_datatype<OTINumber>()`):
 
 | Direction | Memory | Datatype |
 |-----------|--------|----------|

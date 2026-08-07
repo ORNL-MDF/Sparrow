@@ -20,7 +20,7 @@
 // node satisfies  value == d/dA + d/dB  (a free self-consistency check).
 //
 // The MPI-specific surface is one derived datatype per neighbour, built on the
-// committed jet element:
+// committed OTI number element:
 //   * RECV: ghosts are laid out grouped by owner -> a contiguous run of MPI_OTINUM
 //   * SEND: the owned nodes a neighbour needs are scattered -> MPI_Type_indexed
 //           (block lengths all 1) gathers them in place, with no manual packing.
@@ -46,7 +46,7 @@
 
 // ---- problem definition ----------------------------------------------------
 
-using Jet = oti::otinum<2, 1, double>;   // value + d/dA + d/dB
+using OTINumber = oti::otinum<2, 1, double>;   // value + d/dA + d/dB
 static constexpr int V      = 240;       // global node count
 static constexpr int NCHORD = 240;       // deterministic long-range edges
 static constexpr int ITERS  = 2000;      // fixed count -> identical serial work
@@ -56,8 +56,8 @@ static constexpr std::uint64_t SEED = 0x9E3779B97F4A7C15ull;
 static constexpr double FD_H   = 1.0e-6;
 static constexpr double FD_TOL = 1.0e-8;
 
-static const Jet T_A = Jet::variable(0, 1.0);   // 1.0 + e_0
-static const Jet T_B = Jet::variable(1, 1.0);   // 1.0 + e_1
+static const OTINumber T_A = OTINumber::variable(0, 1.0);   // 1.0 + e_0
+static const OTINumber T_B = OTINumber::variable(1, 1.0);   // 1.0 + e_1
 
 static inline bool is_source(int g) { return g == SRC_A || g == SRC_B; }
 
@@ -96,12 +96,12 @@ static std::vector<std::vector<int>> build_adjacency()
 // degree-weighted average of its neighbours, read through `at(g)`. Templated on
 // the lookup so the serial reference (global array) and the distributed solver
 // (owned + ghost slots) share the exact arithmetic, hence are bit-identical.
-template <class Jet_, class Lookup>
-static inline Jet_ relax_node(const std::vector<std::vector<int>>& adj, int g,
-                              const Jet_& self, Lookup at)
+template <class OTINumber_, class Lookup>
+static inline OTINumber_ relax_node(const std::vector<std::vector<int>>& adj, int g,
+                              const OTINumber_& self, Lookup at)
 {
     if (is_source(g)) return self;
-    Jet_ acc(0.0);
+    OTINumber_ acc(0.0);
     for (int nbr : adj[g]) acc += at(nbr);
     return acc * (1.0 / static_cast<double>(adj[g].size()));
 }
@@ -141,7 +141,7 @@ static void block_1d(int coord, int parts, int n, int& start, int& count)
 struct Neighbour {
     int rank = MPI_PROC_NULL;
     int recv_start = 0;        // first local slot of this neighbour's ghost block
-    int recv_count = 0;        // contiguous ghost count (jets)
+    int recv_count = 0;        // contiguous ghost count (OTI numbers)
     MPI_Datatype send_type = MPI_DATATYPE_NULL;  // MPI_Type_indexed over owned
 };
 
@@ -193,7 +193,7 @@ int main(int argc, char** argv)
     // They are an arbitrary, scattered subset of my owned slots -> MPI_Type_indexed
     // (block lengths all 1) describes them in place. Sorted by global id so they
     // arrive in the order r laid out its matching ghost block.
-    MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<Jet>();
+    MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<OTINumber>();
     for (Neighbour& nb : neighbours) {
         std::set<int> needed;                        // my owned global ids r needs
         for (int u = g0; u < g0 + my_count; ++u)
@@ -209,8 +209,8 @@ int main(int argc, char** argv)
     }
 
     // ---- 4. local field: owned slots [0, my_count) + ghost slots after ------
-    std::vector<Jet> a(local_n, Jet(0.0)), b(local_n, Jet(0.0));
-    auto seed_sources = [&](std::vector<Jet>& f) {
+    std::vector<OTINumber> a(local_n, OTINumber(0.0)), b(local_n, OTINumber(0.0));
+    auto seed_sources = [&](std::vector<OTINumber>& f) {
         if (owner[SRC_A] == rank) f[g2l[SRC_A]] = T_A;
         if (owner[SRC_B] == rank) f[g2l[SRC_B]] = T_B;
     };
@@ -218,8 +218,8 @@ int main(int argc, char** argv)
     seed_sources(b);
 
     // ---- 5. Jacobi iteration with unstructured ghost exchange --------------
-    Jet* cur = a.data();
-    Jet* next = b.data();
+    OTINumber* cur = a.data();
+    OTINumber* next = b.data();
     for (int it = 0; it < ITERS; ++it) {
         // Refresh ghosts: send my scattered owned nodes (indexed), receive the
         // neighbour's into my contiguous ghost block. One Sendrecv per neighbour.
@@ -230,22 +230,22 @@ int main(int argc, char** argv)
 
         for (int u = 0; u < my_count; ++u)
             next[u] = relax_node(adj, g0 + u, cur[u],
-                                 [&](int nbr) -> const Jet& { return cur[g2l[nbr]]; });
+                                 [&](int nbr) -> const OTINumber& { return cur[g2l[nbr]]; });
         std::swap(cur, next);
     }
 
     // ---- 6. verify owned nodes against the serial reference (bit-exact) -----
-    const std::vector<Jet> ref = solve_serial<Jet>(adj, T_A, T_B);
+    const std::vector<OTINumber> ref = solve_serial<OTINumber>(adj, T_A, T_B);
     long local_mismatch = 0;
     for (int u = 0; u < my_count; ++u)
-        if (std::memcmp(&cur[u], &ref[g0 + u], sizeof(Jet)) != 0) ++local_mismatch;
+        if (std::memcmp(&cur[u], &ref[g0 + u], sizeof(OTINumber)) != 0) ++local_mismatch;
     long total_mismatch = 0;
     MPI_Reduce(&local_mismatch, &total_mismatch, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    // A non-source interior node prints a sample jet.
+    // A non-source interior node prints a sample OTI number.
     const int sample = V / 2;
     if (g0 <= sample && sample < g0 + my_count) {
-        const Jet& s = cur[g2l[sample]];
+        const OTINumber& s = cur[g2l[sample]];
         std::printf("sample @ node %d (deg %zu), owned by rank %d:\n",
                     sample, adj[sample].size(), rank);
         std::printf("  value              = % .8f\n", s.coeff(oti::sparse({})));
@@ -258,7 +258,7 @@ int main(int argc, char** argv)
     // ---- 7. finite-difference check of the source sensitivities ------------
     int fd_pass = 1;
     if (rank == 0) {
-        const Jet& s = ref[sample];
+        const OTINumber& s = ref[sample];
         const double oti_a = s.coeff(oti::sparse({{0, 1}}));
         const double oti_b = s.coeff(oti::sparse({{1, 1}}));
         const auto ap = solve_serial<double>(adj, 1.0 + FD_H, 1.0);
@@ -281,7 +281,7 @@ int main(int argc, char** argv)
                     V, NCHORD);
         std::printf("partition          : %d ranks, contiguous blocks\n", nproc);
         std::printf("iterations         : %d Jacobi sweeps\n", ITERS);
-        std::printf("verify vs serial   : %s (%ld mismatching jets)\n",
+        std::printf("verify vs serial   : %s (%ld mismatching OTI numbers)\n",
                     total_mismatch == 0 ? "PASS (bit-exact)" : "FAIL", total_mismatch);
         std::printf("finite difference  : centred, h = %.1e\n", FD_H);
         std::printf("  d/dA             : OTI = %.10f, FD = %.10f, |error| = %.3e\n",

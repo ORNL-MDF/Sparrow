@@ -82,7 +82,7 @@ Validity Analysis
 -----------------
 
 ``otinum/validity.hpp`` (a separate include, not part of the umbrella header)
-treats a jet as a local Taylor surrogate and reports how far it can be
+treats an OTI number as a local Taylor surrogate and reports how far it can be
 trusted: surrogate prediction, truncation-error estimate, a tolerance-budget
 trust predicate, per-variable reach, and error attribution. All of it is
 host- and device-callable and allocation-free. See :doc:`validity` for the

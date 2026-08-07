@@ -409,7 +409,7 @@ the helper once per coefficient but the operator chain twice, so the results
 can differ in the last ulp.
 
 These helpers exist for throughput, and their benefit depends on the shape.
-The win comes from jet-times-jet accumulation at order ``N >= 2``, where
+The win comes from OTI-number-times-OTI-number accumulation at order ``N >= 2``, where
 ``fma_into`` has measured around twice the throughput of the equivalent
 operator chain in bandwidth-bound GPU kernels. At first order the operator
 chains already compile to the same code, so there is no need to rewrite

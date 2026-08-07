@@ -1,9 +1,9 @@
-Digital Twin II: A Gaussian-Process Twin From Jets
-==================================================
+Digital Twin II: A Gaussian-Process Twin From OTI Numbers
+=========================================================
 
 The :doc:`digital_twin` twin serves each query from the *nearest* certified
-anchor in its atlas -- every prediction comes from one jet at a time. This
-page takes the same jets one step further: **fuse all anchors into a single
+anchor in its atlas -- every prediction comes from one OTI number at a time. This
+page takes the same OTI numbers one step further: **fuse all anchors into a single
 global surrogate** -- a derivative-enhanced Gaussian process, using `JetGP
 <https://github.com/Samm-Py/jetgp>`_ (`documentation
 <https://samm-py.github.io/jetgp/>`_) -- over all **three** parameters at
@@ -12,8 +12,8 @@ interpolates *between* anchors instead of expanding around one, and its
 standard deviation supplies the reuse gate. The payoff is measured in the only
 units that matter: PDE solves.
 
-Jets Are Training Data
-----------------------
+OTI Numbers Are Training Data
+-----------------------------
 
 One ``otinum<3, 2>`` solve returns the QoI's value, gradient, and full Hessian
 (mixed partials included) with respect to the three parameters -- **10 exact
@@ -37,7 +37,7 @@ derivatives of arbitrary order, declared as derivative multi-indices:
                 derivative_locations=locations, kernel="SE",
                 kernel_type="anisotropic")
 
-Because the order-2 jet contains the order-1 jet, a single exported anchor
+Because the order-2 OTI number contains the order-1 OTI number, a single exported anchor
 bank serves every variant below -- the comparison isolates the *information
 content per solve*, nothing else.
 
@@ -64,10 +64,10 @@ exactly what makes the claim auditable):
    * - value-only GP
      - 16
      - 1
-   * - order-1 jet GP
+   * - order-1 OTI number GP
      - 4
      - 4 (value + gradient)
-   * - order-2 jet GP
+   * - order-2 OTI number GP
      - **2**
      - 10 (+ full Hessian)
    * - nearest-anchor Taylor
@@ -77,20 +77,20 @@ exactly what makes the claim auditable):
 That table is what "the derivatives buy you," in units everyone accepts: PDE
 solves. Three structural readings from the curves:
 
-* **The jet advantage is largest exactly where it matters** -- at low anchor
-  counts, the expensive-simulation regime. At 2 anchors the order-2 jet GP is
+* **The OTI number advantage is largest exactly where it matters** -- at low anchor
+  counts, the expensive-simulation regime. At 2 anchors the order-2 OTI number GP is
   already 58x more accurate than the value-only GP; at 16 anchors it is three
   orders of magnitude ahead.
 * **Local vs global use of the same data.** The nearest-anchor Taylor
-  evaluation (jet data without probabilistic fusion) matches the jet GP at 2
+  evaluation (OTI number data without probabilistic fusion) matches the OTI number GP at 2
   anchors, then *plateaus* near 2e-5: a local model's error is set by the
   distance to its anchor, so it improves only as anchors densify. The GPs fuse
-  all anchors into one global posterior and keep converging -- the jet GPs
+  all anchors into one global posterior and keep converging -- the OTI number GPs
   reach the ~6e-8 floor, and even the value-only GP eventually overtakes
   Taylor.
 * **Cost accounting stays favorable.** An ``otinum<3, 2>`` solve carries 10
   coefficients per node and costs a small multiple of a plain solve -- well
-  under the 8x anchor-count reduction (16 -> 2), and each anchor's jet is
+  under the 8x anchor-count reduction (16 -> 2), and each anchor's OTI number is
   computed once and reused forever.
 
 The Twin Loop
@@ -101,7 +101,7 @@ parameters drift along a closed path through the box, traversed 1.5 times over
 200 updates -- so the last third of the queries returns to parameter territory
 from the first traversal. Four twins serve the identical query stream:
 
-* **Taylor atlas** -- the previous page's twin: every anchor jet is kept, each
+* **Taylor atlas** -- the previous page's twin: every anchor OTI number is kept, each
   query is served by the nearest one under the order-2 validity gate.
 * **value / order-1 / order-2 GP twins** -- every anchor is training data for
   one global posterior; re-solve when its standard deviation at the query
@@ -128,11 +128,11 @@ from the first traversal. Four twins serve the identical query stream:
      - 12
      - 3.2e-3
      - 3.1e-4
-   * - order-1 jet GP
+   * - order-1 OTI number GP
      - 6
      - 4.3e-3
      - 3.4e-4
-   * - order-2 jet GP
+   * - order-2 OTI number GP
      - **5**
      - **1.3e-3**
      - **1.0e-4**
@@ -140,12 +140,12 @@ from the first traversal. Four twins serve the identical query stream:
 Returning is cheap for every twin here -- after the path repeats (dashed
 line), all four run essentially flat, since the second traversal is covered by
 anchors from the first. The differences are set earlier, in *new* territory,
-and they isolate fusion cleanly. The Taylor atlas consults one jet at a time,
+and they isolate fusion cleanly. The Taylor atlas consults one OTI number at a time,
 so it must plant anchors densely enough that every query is near one: 12
 solves. The value GP fuses globally but each solve carries a single number:
-also 12. Fusing the *jets* is what breaks below -- all ten derivatives of
+also 12. Fusing the *OTI numbers* is what breaks below -- all ten derivatives of
 every anchor shape the posterior everywhere, so far fewer anchors make the
-whole path confident: 6 solves at order 1, **5 at order 2**. The order-2 jet
+whole path confident: 6 solves at order 1, **5 at order 2**. The order-2 OTI number
 twin serves 200 updates with 5 solves and is the only variant whose worst-case
 error stays essentially at the tolerance.
 
@@ -157,7 +157,7 @@ at the cost of a few more solves. This is the structural trade against
 :doc:`digital_twin`: the validity gate certifies a hard truncation bound,
 anchor by anchor; the GP gate is calibrated-statistical, but fusion is what
 lets it cover the same path with fewer anchors. Which to prefer is an
-application decision -- and since both consume the same jets, switching
+application decision -- and since both consume the same OTI numbers, switching
 between them (or nesting them) requires no new PDE machinery.
 
 Reproducing It
@@ -166,8 +166,8 @@ Reproducing It
 The experiment is deliberately split so no PDE solver is needed to rerun the
 GP side:
 
-* **The jet bank** -- Halton anchors with full jets, the Monte Carlo truth
-  set, and the drift path (truth + jets) -- is exported by ``uq_gp_bank.cpp``
+* **The OTI number bank** -- Halton anchors with full OTI numbers, the Monte Carlo truth
+  set, and the drift path (truth + OTI numbers) -- is exported by ``uq_gp_bank.cpp``
   on the `oti-analysis-and-benchmarks branch
   <https://github.com/Samm-Py/heat_equation/tree/oti-analysis-and-benchmarks>`_
   of the heat-equation fork (664 solves, ~30 s on a laptop CPU), and the CSVs

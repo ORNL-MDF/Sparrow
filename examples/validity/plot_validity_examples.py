@@ -206,7 +206,7 @@ def plot_2d(name, title, draw_box=False, note=None, box_label="per-axis box (cor
                                    ls=":", lw=1.5))
     from matplotlib.lines import Line2D
     handles = [Line2D([], [], color="cyan", lw=2,
-                      label="cyan: predicted trustworthy (is_trusted, from jet)"),
+                      label="cyan: predicted trustworthy (is_trusted, from OTI number)"),
                Line2D([], [], color="lime", ls="--",
                       label=rf"green: actually trustworthy (truth), $|E|=\tau|f_0|={budget:.3g}$")]
     if draw_box:
@@ -234,7 +234,7 @@ plot_2d("ex4", "Example 4 — $\\exp(x)+\\exp(y)+0.5xy$: coupling tilts the elli
         note="cyan & green gap = order-3+ error the order-2 estimate omits;\n"
              "cyan sits outside green where the estimate is optimistic.")
 
-# ---- Example 5: the model_order trade-off (linear vs quadratic, one jet) ----
+# ---- Example 5: the model_order trade-off (linear vs quadratic, one OTI number) ----
 rows = csv_rows("ex5.csv")
 h = col(rows, "h"); truth = col(rows, "truth")
 s1 = col(rows, "surr1"); s2 = col(rows, "surr2")
@@ -247,7 +247,7 @@ ax[0].plot(h, s2, "C4-.", lw=2, label="quadratic surrogate (model_order=2)")
 ax[0].axvspan(-reach1, reach1, color="C0", alpha=0.12)
 ax[0].axvspan(-reach2, reach2, color="C4", alpha=0.10)
 ax[0].set_xlabel("step $h$"); ax[0].set_ylabel("value")
-ax[0].set_title("same jet, two certified models (shaded = trusted interval)")
+ax[0].set_title("same OTI number, two certified models (shaded = trusted interval)")
 ax[1].plot(h, np.abs(r1), "C0", lw=2, label=r"linear $|$real$|$")
 ax[1].plot(h, np.abs(e1), "C0:", lw=1.5, label=r"linear $|$est$|=\frac{1}{2}h^2$")
 ax[1].plot(h, np.abs(r2), "C4", lw=2, label=r"quad $|$real$|$")
@@ -261,7 +261,7 @@ ax[1].set_title(f"trusting the quadratic grows reach {reach1:.3f} $\\to$ {reach2
 h0, l0 = ax[0].get_legend_handles_labels(); h1, l1 = ax[1].get_legend_handles_labels()
 fig.legend(h0, l0, loc="lower left", bbox_to_anchor=(0.06, 0.0), ncol=1, fontsize=8, frameon=False)
 fig.legend(h1, l1, loc="lower right", bbox_to_anchor=(0.97, 0.0), ncol=2, fontsize=7, frameon=False)
-fig.suptitle(r"Example 5 — model_order trade-off: linear vs quadratic from one $\langle1,3\rangle$ jet",
+fig.suptitle(r"Example 5 — model_order trade-off: linear vs quadratic from one $\langle1,3\rangle$ OTI number",
              fontsize=12)
 fig.tight_layout(rect=[0, 0.13, 1, 0.96]); fig.savefig("figures/ex5.png", dpi=120); plt.close(fig)
 

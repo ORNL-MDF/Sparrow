@@ -9,7 +9,7 @@ These tutorials focus on practical workflows:
   default ``double`` storage.
 * :doc:`directional_derivatives` shows how to seed a line through a larger
   physical input space and compute derivatives along that direction.
-* :doc:`validity` uses a jet as a local surrogate model and asks how far it
+* :doc:`validity` uses an OTI number as a local surrogate model and asks how far it
   can be trusted: prediction, error estimate, a tolerance-budget trust check,
   per-variable reach, and error attribution.
 * :doc:`cmake_package` builds a separate CMake project against an installed
@@ -23,8 +23,8 @@ These tutorials focus on practical workflows:
   coalesced GPU access, introduces the library's conditional object alignment,
   and explains when each helps and when it hurts.
 * :doc:`mpi/index` distributes OTI numbers across MPI ranks: a committed
-  ``MPI_Datatype`` for one jet, an embarrassingly-parallel gather, a datatype
-  confidence test, and the same gather for GPU-resident jets.
+  ``MPI_Datatype`` for one OTI number, an embarrassingly-parallel gather, a datatype
+  confidence test, and the same gather for GPU-resident OTI numbers.
 * :doc:`integration` is the culmination: bringing Sparrow into a real
   application that stacks **MPI** for distribution and **Kokkos** for on-node /
   GPU parallelism -- the dependency model, the device transport pattern, the

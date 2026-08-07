@@ -1,7 +1,7 @@
-Trusting A Jet: Validity Analysis
-=================================
+Trusting an OTI Number: Validity Analysis
+=========================================
 
-A jet is more than a bundle of derivatives — it is a local Taylor *surrogate*
+An OTI number is more than a bundle of derivatives — it is a local Taylor *surrogate*
 of the function it came from. Evaluate the polynomial at a step ``h`` away
 from the expansion point and you get a prediction of ``f(x0 + h)`` with no
 re-evaluation of ``f``. That is enormously useful (a simulation evaluated
@@ -13,16 +13,16 @@ to ask: *how far can I trust this?*
 The Idea: Compute Above The Model You Trust
 -------------------------------------------
 
-An order-``N`` jet cannot bound its own truncation error — the leading error
-of an order-``N`` model is the order-``N+1`` term, which the jet does not
-store. The library's convention follows directly: **compute the jet at least
-one order above the model you intend to certify**. An ``otinum<M, 2>`` jet
+An order-``N`` OTI number cannot bound its own truncation error — the leading error
+of an order-``N`` model is the order-``N+1`` term, which the OTI number does not
+store. The library's convention follows directly: **compute the OTI number at least
+one order above the model you intend to certify**. An ``otinum<M, 2>`` OTI number
 certifies the *linear* surrogate, spending its second-order coefficients as
-the error estimate; an ``otinum<M, 3>`` jet certifies the *quadratic*
+the error estimate; an ``otinum<M, 3>`` OTI number certifies the *quadratic*
 surrogate by default — or, still, the linear one.
 
 That last option matters: the model order and the computed order are
-independent choices. A linear surrogate certified from an order-3 jet uses
+independent choices. A linear surrogate certified from an order-3 OTI number uses
 *both* the second- and third-order coefficients to quantify its error —
 ``truncation_error`` folds every stored order above the model, so each extra
 computed order sharpens the estimate rather than going to waste. Every
@@ -67,7 +67,7 @@ Output
 How It Works
 ------------
 
-**The jet as a surrogate.** ``f = exp(x) + exp(y) + x*y/2`` expanded at
+**The OTI number as a surrogate.** ``f = exp(x) + exp(y) + x*y/2`` expanded at
 ``(0, 0)`` gives value ``2``, gradient ``(1, 1)``, and stored second-order
 coefficients ``c20 = 0.5``, ``c11 = 0.5``, ``c02 = 0.5`` (stored coefficients
 are Taylor coefficients — no factorials to manage).
@@ -112,28 +112,28 @@ Choosing The Model Order Independently
 --------------------------------------
 
 Nothing above is specific to linear models, and the model order is not tied
-to the computed order. From one order-3 jet, the same calls support three
+to the computed order. From one order-3 OTI number, the same calls support three
 different uses:
 
 .. code-block:: cpp
 
    using T3 = oti::otinum<2, 3>;
-   // ... build the jet ...
+   // ... build the OTI number ...
 
    // Quadratic model (the default, N-1 = 2): cubic band is the error.
-   double pred_q = v::evaluate(jet, h);
-   bool ok_q     = v::is_trusted(jet, h, tau, 0.0);
+   double pred_q = v::evaluate(oti_number, h);
+   bool ok_q     = v::is_trusted(oti_number, h, tau, 0.0);
 
-   // LINEAR model from the same jet (model_order = 1): the quadratic AND
+   // LINEAR model from the same OTI number (model_order = 1): the quadratic AND
    // cubic bands BOTH fold into the error estimate -- a sharper, less
-   // optimistic bound than an order-2 jet could give the same model.
-   double pred_l = v::evaluate(jet, h, 1);
-   bool ok_l     = v::is_trusted(jet, h, tau, 0.0, 1);
+   // optimistic bound than an order-2 OTI number could give the same model.
+   double pred_l = v::evaluate(oti_number, h, 1);
+   bool ok_l     = v::is_trusted(oti_number, h, tau, 0.0, 1);
 
-   // Full-jet prediction (model_order = 3): the most accurate number the
-   // jet can produce -- but no stored band remains above it, so no
-   // same-jet error bound exists for it.
-   double pred_full = v::evaluate(jet, h, 3);
+   // Full-OTI-number prediction (model_order = 3): the most accurate number the
+   // OTI number can produce -- but no stored band remains above it, so no
+   // same-OTI-number error bound exists for it.
+   double pred_full = v::evaluate(oti_number, h, 3);
 
 The middle case is the general pattern: computing extra orders beyond
 ``model_order + 1`` is never wasted, because ``truncation_error``,
@@ -145,7 +145,7 @@ Where This Runs
 
 Everything in ``validity.hpp`` is allocation-free and device-callable
 (``OTI_CONSTEXPR_FUNCTION``): the same primitives work in ordinary host code,
-in a post-solve Kokkos ``parallel_for`` over a stored field of jets (a
+in a post-solve Kokkos ``parallel_for`` over a stored field of OTI numbers (a
 per-point "trust map"), or inside a live GPU kernel gating whether to reuse a
 surrogate or re-run a simulation. The step ``h`` is an
 ``oti::detail::array<Coeff, M>`` — ``std::array`` on host builds and

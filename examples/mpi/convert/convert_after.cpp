@@ -11,7 +11,7 @@
 // The transform() kernel is UNCHANGED -- the overloaded arithmetic and
 // elementary functions carry the derivatives through. No Kokkos, no GPU: plain
 // MPI. The committed datatype serves Bcast, Scatter, and Gather alike. Because
-// the per-element computation is unchanged, moving the finished jets introduces
+// the per-element computation is unchanged, moving the finished OTI numbers introduces
 // no rounding and the gathered field is bit-identical to the serial run.
 // Build/run: see CMakeLists.txt.
 
@@ -94,7 +94,7 @@ int main(int argc, char** argv)
     if (rank == 0) {
         const int mid = N / 2;
         const Scalar& s = out[mid];
-        // 5. read value + derivatives out of the jet
+        // 5. read value + derivatives out of the OTI number
         std::printf("sample value = %.8f\n", s.coeff(oti::sparse({})));
         std::printf("        d/du = %.8f\n", s.coeff(oti::sparse({{0, 1}})));
         std::printf("        d/dp = %.8f\n", s.coeff(oti::sparse({{1, 1}})));

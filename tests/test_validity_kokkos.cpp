@@ -1,5 +1,5 @@
 // Device smoke test for otinum/validity.hpp: calls every validity primitive from
-// inside a Kokkos kernel on a live jet, proving they are genuinely
+// inside a Kokkos kernel on a live OTI number, proving they are genuinely
 // device-callable (OTI_CONSTEXPR_FUNCTION -> KOKKOS_FORCEINLINE_FUNCTION,
 // allocation-free, Kokkos::Array I/O), then checks the results host-side against
 // the same hand-computed values as the host unit test.
@@ -39,31 +39,31 @@ int main(int argc, char** argv)
 
         Kokkos::parallel_for(
             "validity_device", 1, KOKKOS_LAMBDA(int) {
-                J jet{};
-                jet.set_coeff(Kokkos::Array<int, 2>{{0, 0}}, 2.0);
-                jet.set_coeff(Kokkos::Array<int, 2>{{1, 0}}, 3.0);
-                jet.set_coeff(Kokkos::Array<int, 2>{{0, 1}}, -1.0);
-                jet.set_coeff(Kokkos::Array<int, 2>{{2, 0}}, 0.5);
-                jet.set_coeff(Kokkos::Array<int, 2>{{1, 1}}, 0.25);
-                jet.set_coeff(Kokkos::Array<int, 2>{{0, 2}}, 2.0);
+                J oti_number{};
+                oti_number.set_coeff(Kokkos::Array<int, 2>{{0, 0}}, 2.0);
+                oti_number.set_coeff(Kokkos::Array<int, 2>{{1, 0}}, 3.0);
+                oti_number.set_coeff(Kokkos::Array<int, 2>{{0, 1}}, -1.0);
+                oti_number.set_coeff(Kokkos::Array<int, 2>{{2, 0}}, 0.5);
+                oti_number.set_coeff(Kokkos::Array<int, 2>{{1, 1}}, 0.25);
+                oti_number.set_coeff(Kokkos::Array<int, 2>{{0, 2}}, 2.0);
 
                 Kokkos::Array<double, 2> h{{0.1, -0.2}};
 
-                out(0) = v::evaluate(jet, h);              // 2.5  (linear)
-                out(1) = v::evaluate(jet, h, 2);           // 2.58 (full quadratic)
-                out(2) = v::truncation_error(jet, h);      // 0.08
-                out(3) = v::is_trusted(jet, h, 0.01) ? 1.0 : 0.0;  // 0
-                out(4) = v::is_trusted(jet, h, 0.05) ? 1.0 : 0.0;  // 1
+                out(0) = v::evaluate(oti_number, h);              // 2.5  (linear)
+                out(1) = v::evaluate(oti_number, h, 2);           // 2.58 (full quadratic)
+                out(2) = v::truncation_error(oti_number, h);      // 0.08
+                out(3) = v::is_trusted(oti_number, h, 0.01) ? 1.0 : 0.0;  // 0
+                out(4) = v::is_trusted(oti_number, h, 0.05) ? 1.0 : 0.0;  // 1
 
-                auto r = v::validity_radius(jet, 0.01);
+                auto r = v::validity_radius(oti_number, 0.01);
                 out(5) = r[0];                              // 0.2
                 out(6) = r[1];                              // 0.1
 
-                auto g = v::error_sensitivity(jet, h);
+                auto g = v::error_sensitivity(oti_number, h);
                 out(7) = g[0];                              // 0.05
                 out(8) = g[1];                              // -0.775
 
-                J flat = jet;
+                J flat = oti_number;
                 flat.set_coeff(Kokkos::Array<int, 2>{{2, 0}}, 0.0);
                 out(9) = v::validity_radius(flat, 0.01)[0]; // +inf
             });
@@ -87,7 +87,7 @@ int main(int argc, char** argv)
             rc = 1;
         }
 
-        // Multi-band fold on device: a <1,3> jet certifying the LINEAR model, so
+        // Multi-band fold on device: a <1,3> OTI number certifying the LINEAR model, so
         // truncation_error / error_sensitivity / validity_radius fold orders 2 AND
         // 3 -- and validity_radius runs its bracket-and-bisection inside the kernel.
         {

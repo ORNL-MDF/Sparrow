@@ -7,26 +7,26 @@ collective communication -- **no communication during the compute**.
 
 The realistic shape is a round trip: the root **scatters** the input field to the
 ranks, **broadcasts** any shared parameters, each rank transforms its block, and
-the results are **gathered** back. Every element is an OTI jet, so each collective
+the results are **gathered** back. Every element is an OTI number, so each collective
 moves the value *and* its derivatives together.
 
 The General Pattern
 -------------------
 
-Replacing the scalar at each point with an OTI jet lifts the whole distributed
+Replacing the scalar at each point with an OTI number lifts the whole distributed
 field into the algebra. The MPI decomposition does not change: each rank still
 transforms the same block, but each element now carries the value and all
-requested derivative coefficients. Scattering and gathering jets therefore move
+requested derivative coefficients. Scattering and gathering OTI numbers therefore move
 the value field and the derivative fields together.
 
 .. figure:: ../../../_static/diagrams/oti_decompose.png
-   :alt: Ordinary field grid lifted into a generic OTI M N jet on root, then scattered across ranks
+   :alt: Ordinary field grid lifted into a generic OTI M N OTI number on root, then scattered across ranks
    :width: 100%
 
    First, the general setup, in order. An ordinary field on a grid (left) is
    **lifted into a generic** :math:`\mathrm{OTI}_M^N` **algebra** *on root* -- a
    pure local operation, no MPI -- gaining the :math:`M` first-order perturbation
-   directions :math:`e_0,\ldots,e_{M-1}` to become the whole seeded jet field
+   directions :math:`e_0,\ldots,e_{M-1}` to become the whole seeded OTI number field
    (middle). Only **then** is it **scattered / broadcast across ranks** (right),
    the first MPI step. Each seeded direction owns its own plane:
    :math:`e_0,e_1,\ldots,e_{M-1}`. Vertical dots denote the omitted directions
@@ -34,21 +34,21 @@ the value field and the derivative fields together.
    derivative orders. Orders :math:`2,\ldots,N` exist on input but are not seeded
    (they are zero until the evaluation fills them).
 
-.. figure:: ../../../_static/diagrams/oti_jet_slices.png
-   :alt: Generic OTI M N input jet and output coefficient groups by total degree
+.. figure:: ../../../_static/diagrams/oti_number_slices.png
+   :alt: Generic OTI M N input OTI number and output coefficient groups by total degree
    :width: 95%
 
    Then, the generic evaluation. Each rank evaluates its block of the seeded
-   input jet (left), where the :math:`M` first-order seeds occupy separate
+   input OTI number (left), where the :math:`M` first-order seeds occupy separate
    planes. One evaluation returns all coefficient groups through order
    :math:`N` (right). The output group for total degree :math:`k` contains
    :math:`\binom{M+k-1}{k}` coefficient fields, for
-   :math:`\binom{M+N}{N}` fields in the complete jet. The colors distinguish
+   :math:`\binom{M+N}{N}` fields in the complete OTI number. The colors distinguish
    conceptual order groups; they do not represent values of a particular
    function. The first-order output coefficients are expanded into matching
    planes :math:`c_{e_0},c_{e_1},\ldots,c_{e_{M-1}}`; higher orders remain
    grouped by total degree. Those higher orders, zero on input, **emerge from the
-   algebra** during the evaluation. MPI still moves each complete jet as **one**
+   algebra** during the evaluation. MPI still moves each complete OTI number as **one**
    ``MPI_OTINUM`` element. The schematic shows the general :math:`N>2` shape;
    lower-order algebras simply truncate the tower earlier. It is deliberately
    algebra-generic, while the concrete example below specializes it to
@@ -124,9 +124,9 @@ What each change is for:
    in direction 0; ``variable(1, P0)`` does the same for the parameter in
    direction 1. The parameter's perturbation rides along through ``MPI_Bcast``.
 #. **Describe the element to MPI.** ``oti::mpi::make_datatype<Scalar>()`` replaces
-   ``MPI_DOUBLE`` -- one committed datatype for the jet, used by ``Bcast``,
+   ``MPI_DOUBLE`` -- one committed datatype for the OTI number, used by ``Bcast``,
    ``Scatterv``, and ``Gatherv`` alike -- and is freed at the end.
-#. **Read the derivatives out.** The gathered value is now a jet; pull its
+#. **Read the derivatives out.** The gathered value is now an OTI number; pull its
    coefficients with ``coeff()`` (or use it directly in further OTI arithmetic).
 
 Note what is **absent**: the ``transform()`` kernel, the decomposition, the
@@ -138,17 +138,17 @@ Movement vs Combining
 ---------------------
 
 ``Scatter``, ``Gather``, and ``Bcast`` here are all **movement** collectives --
-along with ``Allgather`` and ``Alltoall`` -- that only *move* jets and never
+along with ``Allgather`` and ``Alltoall`` -- that only *move* OTI numbers and never
 combine them. They all need the same thing and nothing more: **the committed
 datatype, no custom** ``MPI_Op``. In this example, each point is computed with the
 same operations and in the same order as in the serial program, so moving the
-finished jets does not change any coefficient: the gathered field is
+finished OTI numbers does not change any coefficient: the gathered field is
 **bit-identical** to the serial result at every tested rank count. Movement alone
 does not introduce rounding, but bit-identical agreement still assumes the
 parallel program has not changed the per-element computation.
 
 That is the dividing line for the rest of the ladder. The next rung,
-:doc:`reduce`, is the other family: collectives that *fold* jets together
+:doc:`reduce`, is the other family: collectives that *fold* OTI numbers together
 (``Reduce``, ``Allreduce``) and so need a custom operator built on the same
 datatype.
 
@@ -185,7 +185,7 @@ directory directly remains valid:
    target_link_libraries(my_app PRIVATE MPI::MPI_CXX)
 
 For an application that already uses Kokkos, the additional **OTI-specific**
-configuration is to enable ``OTI_ENABLE_KOKKOS`` so a jet is callable inside a
+configuration is to enable ``OTI_ENABLE_KOKKOS`` so an OTI number is callable inside a
 device kernel. Selecting and configuring the Kokkos backend, compiler wrapper,
 and GPU architecture remain part of the application's normal Kokkos toolchain;
 the complete setup is covered in :doc:`../../integration`.
@@ -213,7 +213,7 @@ same ranks:
 
 The value is unchanged (the OTI real part is the original computation), and the
 derivatives come out alongside it -- ``d/du`` seeded per point and scattered,
-``d/dp`` seeded once and broadcast. Because the collectives only move jets, the
+``d/dp`` seeded once and broadcast. Because the collectives only move OTI numbers, the
 sample is identical at every rank count. From here the full dependency model,
 CMake recipe, the device-pointer vs host-staging transport choice, and the
 toolchain gotchas are in :doc:`../../integration`.

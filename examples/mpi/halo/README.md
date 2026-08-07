@@ -11,7 +11,7 @@ then sweeps its interior.
 The two hot walls carry their temperature as **seeded variables** (West = `e_0`,
 South = `e_1`), so every converged cell drags along `d(temperature)/dT_west` and
 `d(temperature)/dT_south` — the parameter sensitivity of the whole field, from a
-single solve. The jet is `oti::otinum<2, 1, double>` (value + two first
+single solve. The OTI number is `oti::otinum<2, 1, double>` (value + two first
 derivatives).
 
 Because the problem is linear and both walls sit at 1.0, the centre cell satisfies
@@ -33,8 +33,8 @@ python3 plot_fd_error.py fd_error.csv mpi_halo_fd_error.png
 
 ## The MPI-specific surface
 
-Two derived datatypes, both built on the committed jet element
-(`oti::mpi::make_datatype<Jet>()`):
+Two derived datatypes, both built on the committed OTI number element
+(`oti::mpi::make_datatype<OTINumber>()`):
 
 | Halo | Direction | Memory | Datatype |
 |------|-----------|--------|----------|

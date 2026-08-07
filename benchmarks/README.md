@@ -88,7 +88,7 @@ python3 benchmarks/plot_benchmark.py benchmarks/results
   Read it kernel-by-kernel against the
   end-to-end heat stage; do not collapse it into one universal alignment number.
 - **layout** — the SoA/AoS decision is access-pattern dependent: SoA wins
-  contiguous streaming of larger jets, AoS wins scattered gathers (each neighbor
+  contiguous streaming of larger OTI numbers, AoS wins scattered gathers (each neighbor
   is one contiguous load), which is why the heat solver's stiffness gather keeps
   AoS. This benchmark is the data behind that choice.
 - **fused** — `fma_into` removes the multiply's temporary (a real win for the

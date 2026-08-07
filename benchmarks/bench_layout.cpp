@@ -3,12 +3,12 @@
 // arithmetic and everything else at the library default.
 //
 //   stream : y = a*x + y, one read of x and one read+write of y per element.
-//            Sequential, so the question is pure coalescing of contiguous jets.
-//   gather : each element sums K neighbor jets at scattered offsets, like a
-//            stencil matvec. Each neighbor is a separate jet load -- AoS does it
+//            Sequential, so the question is pure coalescing of contiguous OTI numbers.
+//   gather : each element sums K neighbor OTI numbers at scattered offsets, like a
+//            stencil matvec. Each neighbor is a separate OTI number load -- AoS does it
 //            as one (possibly wide) contiguous load per neighbor; SoA does it as
 //            ncoeffs coalesced loads per neighbor. This is where small aligned
-//            jets favor AoS and the heat solver's stiffness gather lives.
+//            OTI numbers favor AoS and the heat solver's stiffness gather lives.
 //
 // Reports useful GB/s (useful coefficient bytes / time). AoS and SoA compute the
 // same thing, so their checksums must match. This is the data behind "when to
@@ -48,7 +48,7 @@ struct aos_view {
 };
 
 template <class T>
-KOKKOS_INLINE_FUNCTION T fill_jet(std::size_t i, int salt)
+KOKKOS_INLINE_FUNCTION T fill_oti_number(std::size_t i, int salt)
 {
     using Coeff = typename T::coeff_type;
     T out;
@@ -62,7 +62,7 @@ template <class T, class Store>
 void init(Store s, std::size_t n, int salt)
 {
     Kokkos::parallel_for("init", n, KOKKOS_LAMBDA(std::size_t i) {
-        s.store(i, fill_jet<T>(i, salt));
+        s.store(i, fill_oti_number<T>(i, salt));
     });
     Kokkos::fence();
 }

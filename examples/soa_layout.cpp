@@ -14,7 +14,7 @@ int main()
     Span values(buffer.data(), n);
 
     // Evaluate f(x, y) = x*x + 3*y at (x, y) = (i, 10) for each element and
-    // scatter the resulting jet into the coefficient-major buffer.
+    // scatter the resulting OTI number into the coefficient-major buffer.
     for (std::size_t i = 0; i < n; ++i) {
         T x = T::variable(0, static_cast<double>(i));
         T y = T::variable(1, 10.0);

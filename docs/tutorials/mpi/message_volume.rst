@@ -1,8 +1,8 @@
 Message Volume
 ==============
 
-Counting in *jets* keeps the API clean, but do not lose sight of what one jet
-costs on the wire: a jet is ``ncoeffs`` coefficients, so **every message is**
+Counting in *OTI numbers* keeps the API clean, but do not lose sight of what one OTI number
+costs on the wire: an OTI number is ``ncoeffs`` coefficients, so **every message is**
 ``ncoeffs`` **times the size of the equivalent scalar message**. The coefficient
 count grows combinatorially with the number of seeded directions :math:`M` and the
 derivative order :math:`N`, as :math:`\binom{M+N}{N}`:
@@ -35,4 +35,4 @@ This is a multiplier on **communication**, not just storage: a halo exchange, a
 gather, or an ``Allreduce`` moves ``ncoeffs`` times the bytes a plain-``double``
 solve would, and bandwidth-bound exchanges scale accordingly. The practical rule
 is to **seed only the directions you need and use the lowest derivative order that
-answers the question** -- the jet shape, not the rank count, sets the volume.
+answers the question** -- the OTI number shape, not the rank count, sets the volume.

@@ -1,6 +1,6 @@
 #pragma once
 
-// Surrogate evaluation and truncation-error / validity analysis for otinum jets.
+// Surrogate evaluation and truncation-error / validity analysis for OTI numbers.
 //
 // An otinum<M, P, Coeff> built by seeding the M perturbed parameters as OTI
 // variables is a local truncated-Taylor surrogate of some quantity f in
@@ -15,10 +15,10 @@
 //
 // The model order / computed order contract (THE thing to get right):
 //   You CERTIFY an order-`model_order` surrogate. Its leading truncation error is
-//   the order-(model_order+1) term, so the jet must be computed at order
+//   the order-(model_order+1) term, so the OTI number must be computed at order
 //   P >= model_order+1 for that term to exist in storage. By default model_order
 //   = P-1, i.e. you run the simulation at ONE order above the model you trust and
-//   the jet's top order is the dropped-term error estimate.
+//   the OTI number's top order is the dropped-term error estimate.
 //
 //     otinum<3,2> default -> model_order 1: certified LINEAR surrogate, quadratic
 //                            terms spent as the trust budget.
@@ -27,11 +27,11 @@
 //
 //   evaluate() and the trust functions SHARE model_order, so "what you predict
 //   with" and "what you certify" never describe different models. evaluate() may
-//   also be called with model_order = P to use the full jet for a more accurate
+//   also be called with model_order = P to use the full OTI number for a more accurate
 //   but UNcertified prediction (no higher term to bound it).
 //
 // Everything here is OTI_CONSTEXPR_FUNCTION (host + device, allocation-free), so
-// it runs inside an ensemble/control kernel on the live jet, or in a post-solve
+// it runs inside an ensemble/control kernel on the live OTI number, or in a post-solve
 // Kokkos parallel_for over a stored field -- same primitives either way.
 
 #include <cmath>
@@ -104,13 +104,13 @@ OTI_CONSTEXPR_FUNCTION Coeff monomial_at(oti::detail::array<Coeff, M> const& h,
     return r;
 }
 
-// Sum of jet[idx] * h^alpha(idx) over every coefficient whose total order lies
+// Sum of OTI number[idx] * h^alpha(idx) over every coefficient whose total order lies
 // in [min_order, max_order]. Each coefficient's order is a compile-time
 // literal, so the band test is one scalar compare per term; excluded terms are
 // skipped outright (not accumulated as +0), preserving bit-exactness with a
 // plain prefix loop over the graded layout.
 template <int M, int N, class Coeff, std::size_t... IDX>
-OTI_CONSTEXPR_FUNCTION Coeff band_sum(otinum<M, N, Coeff> const& jet,
+OTI_CONSTEXPR_FUNCTION Coeff band_sum(otinum<M, N, Coeff> const& oti_number,
                                       identity_t<oti::detail::array<Coeff, M>> const& h,
                                       int min_order, int max_order,
                                       std::index_sequence<IDX...>) noexcept
@@ -118,7 +118,7 @@ OTI_CONSTEXPR_FUNCTION Coeff band_sum(otinum<M, N, Coeff> const& jet,
     using tb = oti::detail::tables<M, N>;
     Coeff acc = Coeff(0);
     (((tb::order_of[IDX] >= min_order && tb::order_of[IDX] <= max_order)
-          ? (void)(acc += jet[static_cast<int>(IDX)] *
+          ? (void)(acc += oti_number[static_cast<int>(IDX)] *
                           monomial_at<M, N, Coeff, IDX>(
                               h, std::make_index_sequence<
                                      oti::detail::packed_alpha<N>::cap>{}))
@@ -146,19 +146,19 @@ OTI_CONSTEXPR_FUNCTION Coeff dmonomial_at(oti::detail::array<Coeff, M> const& h,
 }
 
 // One coefficient's contribution to the error gradient: for each nonzero
-// exponent (p, e) of alpha(IDX), g[p] += jet[IDX] * e * h^(alpha - e_p).
+// exponent (p, e) of alpha(IDX), g[p] += OTI number[IDX] * e * h^(alpha - e_p).
 // Folding over the sparse entries visits exactly the variables with a[i] > 0,
 // in ascending position order -- the same accumulation order as a dense scan.
 template <int M, int N, class Coeff, std::size_t IDX, std::size_t... T>
 OTI_CONSTEXPR_FUNCTION void sensitivity_add(identity_t<oti::detail::array<Coeff, M>>& g,
-                                            otinum<M, N, Coeff> const& jet,
+                                            otinum<M, N, Coeff> const& oti_number,
                                             identity_t<oti::detail::array<Coeff, M>> const& h,
                                             std::index_sequence<T...>) noexcept
 {
     using tb = oti::detail::tables<M, N>;
     (((static_cast<int>(T) < tb::idx_to_sparse[IDX].k)
           ? (void)(g[static_cast<std::size_t>(tb::idx_to_sparse[IDX].pos[T])] +=
-                jet[static_cast<int>(IDX)] *
+                oti_number[static_cast<int>(IDX)] *
                 static_cast<Coeff>(tb::idx_to_sparse[IDX].exp[T]) *
                 dmonomial_at<M, N, Coeff, IDX, T>(
                     h, std::make_index_sequence<
@@ -169,7 +169,7 @@ OTI_CONSTEXPR_FUNCTION void sensitivity_add(identity_t<oti::detail::array<Coeff,
 
 template <int M, int N, class Coeff, std::size_t... IDX>
 OTI_CONSTEXPR_FUNCTION void sensitivity_fold(identity_t<oti::detail::array<Coeff, M>>& g,
-                                             otinum<M, N, Coeff> const& jet,
+                                             otinum<M, N, Coeff> const& oti_number,
                                              identity_t<oti::detail::array<Coeff, M>> const& h,
                                              int min_order,
                                              std::index_sequence<IDX...>) noexcept
@@ -177,7 +177,7 @@ OTI_CONSTEXPR_FUNCTION void sensitivity_fold(identity_t<oti::detail::array<Coeff
     using tb = oti::detail::tables<M, N>;
     (((tb::order_of[IDX] >= min_order)
           ? (void)sensitivity_add<M, N, Coeff, IDX>(
-                g, jet, h,
+                g, oti_number, h,
                 std::make_index_sequence<oti::detail::packed_alpha<N>::cap>{})
           : (void)0),
      ...);
@@ -186,17 +186,17 @@ OTI_CONSTEXPR_FUNCTION void sensitivity_fold(identity_t<oti::detail::array<Coeff
 // |E_i(r)|: magnitude of the pure-axis truncation error for a step r along
 // variable i, summed over every stored order above the model,
 // |sum_{d=model_order+1}^{N} c_{d e_i} r^d|. (Restricting h to one axis kills
-// all mixed monomials, so this equals |truncation_error(jet, r*e_i)|.) Used by
+// all mixed monomials, so this equals |truncation_error(oti_number, r*e_i)|.) Used by
 // validity_radius to size the per-axis reach when more than one band is present.
 template <int M, int N, class Coeff>
-OTI_CONSTEXPR_FUNCTION Coeff pure_axis_error(otinum<M, N, Coeff> const& jet,
+OTI_CONSTEXPR_FUNCTION Coeff pure_axis_error(otinum<M, N, Coeff> const& oti_number,
                                              int i, Coeff r, int model_order) noexcept
 {
     Coeff acc = Coeff(0);
     for (int d = model_order + 1; d <= N; ++d) {
         oti::detail::alpha_t<M> a{};
         a[i] = d;
-        acc += jet[oti::detail::rank<M, N>(a)] * pow_int(r, d);
+        acc += oti_number[oti::detail::rank<M, N>(a)] * pow_int(r, d);
     }
     return abs_scalar(acc);
 }
@@ -208,12 +208,12 @@ OTI_CONSTEXPR_FUNCTION Coeff pure_axis_error(otinum<M, N, Coeff> const& jet,
 // factorials enter. model_order defaults to P-1 (the certified model); pass P for
 // the full, more accurate, uncertified prediction.
 template <int M, int N, class Coeff>
-OTI_CONSTEXPR_FUNCTION Coeff evaluate(otinum<M, N, Coeff> const& jet,
+OTI_CONSTEXPR_FUNCTION Coeff evaluate(otinum<M, N, Coeff> const& oti_number,
                                       detail::identity_t<oti::detail::array<Coeff, M>> const& h,
                                       int model_order = N - 1) noexcept
 {
     OTI_ASSERT(model_order >= 0 && model_order <= N);
-    return detail::band_sum(jet, h, 0, model_order,
+    return detail::band_sum(oti_number, h, 0, model_order,
                             std::make_index_sequence<otinum<M, N, Coeff>::ncoeffs>{});
 }
 
@@ -224,31 +224,31 @@ OTI_CONSTEXPR_FUNCTION Coeff evaluate(otinum<M, N, Coeff> const& jet,
 // computed orders (e.g. <M,3> certifying a linear model) it folds them all in
 // for a tighter, less optimistic error estimate.
 template <int M, int N, class Coeff>
-OTI_CONSTEXPR_FUNCTION Coeff truncation_error(otinum<M, N, Coeff> const& jet,
+OTI_CONSTEXPR_FUNCTION Coeff truncation_error(otinum<M, N, Coeff> const& oti_number,
                                               detail::identity_t<oti::detail::array<Coeff, M>> const& h,
                                               int model_order = N - 1) noexcept
 {
     OTI_ASSERT(model_order >= 0 && model_order < N);
     // Every stored order above the model, through the top stored order N.
-    return detail::band_sum(jet, h, model_order + 1, N,
+    return detail::band_sum(oti_number, h, model_order + 1, N,
                             std::make_index_sequence<otinum<M, N, Coeff>::ncoeffs>{});
 }
 
 // Trust check: is the order-`model_order` prediction at h within tolerance of
-// the value? |truncation_error| <= tau_abs + tau * |f|, f = jet real part
+// the value? |truncation_error| <= tau_abs + tau * |f|, f = OTI number real part
 // (numpy-isclose semantics). tau is the relative tolerance; tau_abs (default 0)
 // is an absolute floor in the QoI's units. The floor matters for signed
 // quantities whose value passes through zero (temperature deltas, residuals,
 // fluxes): there a purely relative budget collapses to zero and reports
 // everything untrusted, however exact the surrogate is.
 template <int M, int N, class Coeff>
-OTI_CONSTEXPR_FUNCTION bool is_trusted(otinum<M, N, Coeff> const& jet,
+OTI_CONSTEXPR_FUNCTION bool is_trusted(otinum<M, N, Coeff> const& oti_number,
                                        detail::identity_t<oti::detail::array<Coeff, M>> const& h, Coeff tau,
                                        Coeff tau_abs = Coeff(0),
                                        int model_order = N - 1) noexcept
 {
-    Coeff const budget = tau_abs + tau * detail::abs_scalar(jet[0]);
-    return detail::abs_scalar(truncation_error(jet, h, model_order)) <= budget;
+    Coeff const budget = tau_abs + tau * detail::abs_scalar(oti_number[0]);
+    return detail::abs_scalar(truncation_error(oti_number, h, model_order)) <= budget;
 }
 
 // Per-variable reach: the largest single-axis step r_i along parameter i for
@@ -266,30 +266,30 @@ OTI_CONSTEXPR_FUNCTION bool is_trusted(otinum<M, N, Coeff> const& jet,
 // with sum_i (h_i / r_i)^2 <= 1, NOT |h_i| <= r_i (the box corner overshoots).
 template <int M, int N, class Coeff>
 OTI_CONSTEXPR_FUNCTION oti::detail::array<Coeff, M> validity_radius(
-    otinum<M, N, Coeff> const& jet, Coeff tau, Coeff tau_abs = Coeff(0),
+    otinum<M, N, Coeff> const& oti_number, Coeff tau, Coeff tau_abs = Coeff(0),
     int model_order = N - 1) noexcept
 {
     OTI_ASSERT(model_order >= 0 && model_order < N);
     int const d0 = model_order + 1;
-    Coeff const budget = tau_abs + tau * detail::abs_scalar(jet[0]);
+    Coeff const budget = tau_abs + tau * detail::abs_scalar(oti_number[0]);
     oti::detail::array<Coeff, M> r{};
     for (int i = 0; i < M; ++i) {
         // Seed the upper bracket from the leading pure term's closed form; fall
         // back to 1 when that coefficient vanishes.
         oti::detail::alpha_t<M> a0{};
         a0[i] = d0;
-        Coeff const c0 = detail::abs_scalar(jet[oti::detail::rank<M, N>(a0)]);
+        Coeff const c0 = detail::abs_scalar(oti_number[oti::detail::rank<M, N>(a0)]);
         Coeff hi = c0 > Coeff(0)
                        ? static_cast<Coeff>(oti::detail::oti_pow<Coeff>(budget / c0, Coeff(1) / Coeff(d0)))
                        : Coeff(1);
         // Grow hi until the full pure-axis error reaches the budget; if it never
         // does, the model is exact enough in this variable -> reach is +inf.
         int guard = 0;
-        while (detail::pure_axis_error<M, N>(jet, i, hi, model_order) < budget && guard < 64) {
+        while (detail::pure_axis_error<M, N>(oti_number, i, hi, model_order) < budget && guard < 64) {
             hi *= Coeff(2);
             ++guard;
         }
-        if (detail::pure_axis_error<M, N>(jet, i, hi, model_order) < budget) {
+        if (detail::pure_axis_error<M, N>(oti_number, i, hi, model_order) < budget) {
             r[i] = detail::pos_inf<Coeff>();
             continue;
         }
@@ -298,7 +298,7 @@ OTI_CONSTEXPR_FUNCTION oti::detail::array<Coeff, M> validity_radius(
         Coeff lo = Coeff(0);
         for (int it = 0; it < 64; ++it) {
             Coeff const mid = Coeff(0.5) * (lo + hi);
-            if (detail::pure_axis_error<M, N>(jet, i, mid, model_order) < budget)
+            if (detail::pure_axis_error<M, N>(oti_number, i, mid, model_order) < budget)
                 lo = mid;
             else
                 hi = mid;
@@ -315,14 +315,14 @@ OTI_CONSTEXPR_FUNCTION oti::detail::array<Coeff, M> validity_radius(
 // (mixed-partial) terms across their variables for free.
 template <int M, int N, class Coeff>
 OTI_CONSTEXPR_FUNCTION oti::detail::array<Coeff, M> error_sensitivity(
-    otinum<M, N, Coeff> const& jet, detail::identity_t<oti::detail::array<Coeff, M>> const& h,
+    otinum<M, N, Coeff> const& oti_number, detail::identity_t<oti::detail::array<Coeff, M>> const& h,
     int model_order = N - 1) noexcept
 {
     OTI_ASSERT(model_order >= 0 && model_order < N);
     oti::detail::array<Coeff, M> g{};
     for (int i = 0; i < M; ++i) g[i] = Coeff(0);
     // Every stored order above the model, through the top stored order N.
-    detail::sensitivity_fold(g, jet, h, model_order + 1,
+    detail::sensitivity_fold(g, oti_number, h, model_order + 1,
                              std::make_index_sequence<otinum<M, N, Coeff>::ncoeffs>{});
     return g;
 }

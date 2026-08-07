@@ -2,8 +2,8 @@
 """Schematic for the unstructured ghost-exchange (MPI_Type_indexed) rung.
 
 Two ranks, each a shelf of owned nodes plus a small ghost region. EVERY node is a
-full OTI_M^N jet, drawn as an oblique tower (value, first-order directions, ... up
-to order N) exactly as in the other tutorials -- so one node is one jet and the
+full OTI_M^N OTI number, drawn as an oblique tower (value, first-order directions, ... up
+to order N) exactly as in the other tutorials -- so one node is one OTI number and the
 whole tower travels as a single element.
 
 The exchange is bidirectional and irregular:
@@ -26,7 +26,7 @@ SEND_02 = "#C0504D"   # rank 0 -> rank 2 arrows / highlight
 SEND_20 = "#2E8B83"   # rank 2 -> rank 0 arrows / highlight
 FIGURE_DPI = 200
 
-# OTI_M^N coefficient colours (match oti_jet_slices / mpi_halo)
+# OTI_M^N coefficient colours (match oti_number_slices / mpi_halo)
 VAL, FIRST, SECOND, TOP = "#F3C969", "#73A9D8", "#9BCB8C", "#70C1B3"
 
 # tower geometry (one node)
@@ -49,7 +49,7 @@ def Cpt(bx, bz, u, v, z):
 
 
 def node_tower(ax, col, bz, label, base_edge, base_lw, faded):
-    """Draw one OTI_M^N jet as a stacked oblique tower."""
+    """Draw one OTI_M^N OTI number as a stacked oblique tower."""
     bx = colx(col)
     for z, color in LEVELS:
         pts = [Cpt(bx, bz, 0, 0, z), Cpt(bx, bz, 1, 0, z),
@@ -156,7 +156,7 @@ def main(out_path="mpi_unstructured.png"):
             fontsize=9, ha="left", va="center", color="0.2")
 
     fig.suptitle("Unstructured exchange: each node is an "
-                 r"$\mathrm{OTI}_M^N$ jet, and MPI_Type_indexed ships the "
+                 r"$\mathrm{OTI}_M^N$ OTI number, and MPI_Type_indexed ships the "
                  "scattered ones whole", fontsize=12.5, fontweight="bold",
                  y=0.96)
     fig.savefig(out_path, dpi=FIGURE_DPI, bbox_inches="tight", pad_inches=0.12)

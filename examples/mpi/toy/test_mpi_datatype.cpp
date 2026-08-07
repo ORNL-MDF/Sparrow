@@ -1,13 +1,13 @@
 // Confidence test for oti::mpi::make_datatype.
 //
-// Proves the committed MPI datatype matches the C++ otinum layout and moves jets
+// Proves the committed MPI datatype matches the C++ otinum layout and moves OTI numbers
 // faithfully, across the cases the toy did NOT cover: float as well as double,
 // and odd-ncoeffs shapes (only 4/8-aligned, the layouts where a padding surprise
 // would bite). For each shape it checks:
 //   (1) MPI_Type_size   == ncoeffs * sizeof(Coeff)   (payload bytes)
 //   (2) MPI_Type extent == sizeof(T), lb == 0        (array stride; what makes
 //                                                      count>1 / Gatherv correct)
-//   (3) a ring Sendrecv of many jets round-trips bit-exact (real point-to-point,
+//   (3) a ring Sendrecv of many OTI numbers round-trips bit-exact (real point-to-point,
 //       exercising the extent with count>1)
 //
 // Build: mpicxx -std=c++17 -O2 -I ../../../include test_mpi_datatype.cpp -o test_mpi_datatype
@@ -24,7 +24,7 @@
 
 namespace {
 
-constexpr int NJETS = 257;   // prime, >1, so count>1 exercises the extent/stride
+constexpr int N_OTI_NUMBERS = 257;  // prime, >1, so count>1 exercises extent/stride
 
 // Deterministic, exactly-representable fill so sender and receiver compute the
 // identical bit pattern (the round-trip is then a pure transport check).
@@ -52,29 +52,29 @@ int check_shape(int rank, int size, char const* name)
     int const want_size = T::ncoeffs * static_cast<int>(sizeof(Coeff));
     bool const size_ok = (type_size == want_size);
 
-    // (2) extent == sizeof(T), lower bound 0 -> strides through an array of jets
+    // (2) extent == sizeof(T), lower bound 0 -> strides through an array of OTI numbers
     MPI_Aint lb = 0, extent = 0;
     MPI_Type_get_extent(dt, &lb, &extent);
     bool const extent_ok =
         (lb == 0 && extent == static_cast<MPI_Aint>(sizeof(T)));
 
-    // (3) ring round-trip: send NJETS jets right, receive from left, verify the
+    // (3) ring round-trip: send N_OTI_NUMBERS right, receive from left, verify the
     // received buffer equals what the left neighbor produced (bit-exact memcmp).
-    std::vector<T> sendbuf(NJETS), recvbuf(NJETS), expect(NJETS);
-    for (int i = 0; i < NJETS; ++i) {
+    std::vector<T> sendbuf(N_OTI_NUMBERS), recvbuf(N_OTI_NUMBERS), expect(N_OTI_NUMBERS);
+    for (int i = 0; i < N_OTI_NUMBERS; ++i) {
         fill(sendbuf[i], rank, i);
     }
     int const right = (rank + 1) % size;
     int const left = (rank + size - 1) % size;
-    MPI_Sendrecv(sendbuf.data(), NJETS, dt, right, 7,
-                 recvbuf.data(), NJETS, dt, left, 7,
+    MPI_Sendrecv(sendbuf.data(), N_OTI_NUMBERS, dt, right, 7,
+                 recvbuf.data(), N_OTI_NUMBERS, dt, left, 7,
                  MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    for (int i = 0; i < NJETS; ++i) {
+    for (int i = 0; i < N_OTI_NUMBERS; ++i) {
         fill(expect[i], left, i);
     }
     bool const roundtrip_ok =
         std::memcmp(recvbuf.data(), expect.data(),
-                    static_cast<size_t>(NJETS) * sizeof(T)) == 0;
+                    static_cast<size_t>(N_OTI_NUMBERS) * sizeof(T)) == 0;
 
     oti::mpi::free_datatype(dt);
 
@@ -98,8 +98,8 @@ int main(int argc, char** argv)
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     if (rank == 0) {
-        std::printf("oti::mpi datatype confidence test (%d rank%s, %d jets/msg)\n",
-                    size, size == 1 ? "" : "s", NJETS);
+        std::printf("oti::mpi datatype confidence test (%d rank%s, %d OTI numbers/msg)\n",
+                    size, size == 1 ? "" : "s", N_OTI_NUMBERS);
     }
 
     int f = 0;

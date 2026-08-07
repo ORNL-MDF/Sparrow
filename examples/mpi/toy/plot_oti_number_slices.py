@@ -2,19 +2,19 @@
 """Conceptual views of a distributed OTI_M^N evaluation.
 
 oti_decompose.png : an ordinary field on a grid (no rank slices) -> the seeded
-        input jet, decomposed across ranks. Shows the "lift into OTI + split
+        input OTI number, decomposed across ranks. Shows the "lift into OTI + split
         across ranks" step. Its RHS is the LHS of the next figure.
-oti_jet_slices.png : the seeded input jet (left) -> the output jet from one
+oti_number_slices.png : the seeded input OTI number (left) -> the output OTI number from one
         evaluation (right), one colored plane per total-degree group. Shows the
         "each rank evaluates" step for a generic otinum<M,N>.
 
 The planes group coefficients by total degree |alpha|. Order k contains
-binom(M+k-1, k) coefficient fields; the complete jet contains
+binom(M+k-1, k) coefficient fields; the complete OTI number contains
 binom(M+N, N). Horizontal ellipses denote omitted directions; vertical dots
 denote omitted orders. Only the value and M first-order directions are seeded on
 input. Orders 2 through N start at zero and emerge from the evaluation.
 
-Usage: plot_jet_slices.py [jet_slices.png [decompose.png]]
+Usage: plot_oti_number_slices.py [oti_number_slices.png [decompose.png]]
 """
 import sys
 
@@ -159,9 +159,9 @@ def draw_vertical_dots(ax, x0, z, color="0.4"):
 
 
 def draw_input_tower(ax, x0, layers, labels_side="left",
-                     caption="seeded input jet,\ndecomposed across ranks",
+                     caption="seeded input OTI number,\ndecomposed across ranks",
                      decomposed=True):
-    """Generic input jet grouped by total degree.
+    """Generic input OTI number grouped by total degree.
 
     Each displayed first-order direction owns a separate plane; vertical dots
     stand for e_2 ... e_{M-2}. Higher-order groups are drawn empty/dashed because
@@ -278,7 +278,7 @@ def draw_input_tower(ax, x0, layers, labels_side="left",
 
 
 def draw_output_tower(ax, x0, layers):
-    """Generic output jet: one plane per displayed total-degree group."""
+    """Generic output OTI number: one plane per displayed total-degree group."""
     top = layers[-1][0] * DZ
     projection_lines(ax, x0, 0.0, top)
     for level, label, color in layers:
@@ -328,13 +328,13 @@ def draw_output_tower(ax, x0, layers):
             r"total: $\binom{M+N}{N}$ coefficient fields",
             fontsize=10.5, color="0.2", ha="left", va="center")
     ax.text(corner(0.5, 0, 0, x0)[0], corner(0.5, 0, 0, x0)[1] - 0.45,
-            r"output jet $\mathrm{OTI}_M^N$:"
+            r"output OTI number $\mathrm{OTI}_M^N$:"
             "\nall coefficient groups",
             fontsize=11, ha="center", va="top")
 
 
-def main(out_path="oti_jet_slices.png"):
-    """The evaluate figure: seeded input jet -> output coefficient tower."""
+def main(out_path="oti_number_slices.png"):
+    """The evaluate figure: seeded input OTI number -> output coefficient tower."""
     layers = ORDER_LAYERS
     fig, ax = plt.subplots(figsize=(14.5, 9.5))
     ax.set_aspect("equal")
@@ -366,7 +366,7 @@ def main(out_path="oti_jet_slices.png"):
     top = layers[-1][0] * DZ
     ax.set_xlim(corner(0, 1, 0, xL)[0] - 3.8, corner(1, 1, 0, x0)[0] + 4.2)
     ax.set_ylim(-1.15, top + DY + 0.48)
-    fig.text(0.46, 0.95, r"A generic $\mathrm{OTI}_M^N$ jet: "
+    fig.text(0.46, 0.95, r"A generic $\mathrm{OTI}_M^N$ OTI number: "
              "seeded directions in  →  all derivative orders out",
              fontsize=13.5, fontweight="bold",
              ha="center")
@@ -376,8 +376,8 @@ def main(out_path="oti_jet_slices.png"):
 
 
 def decompose_image(out_path="oti_decompose.png"):
-    """The setup figure, in order: ordinary field -> lift into OTI (whole jet on
-    root) -> scatter/broadcast across ranks (rank-decomposed jet)."""
+    """The setup figure, in order: ordinary field -> lift into OTI (whole OTI number on
+    root) -> scatter/broadcast across ranks (rank-decomposed OTI number)."""
     layers = ORDER_LAYERS
     fig, ax = plt.subplots(figsize=(20.5, 9.5))
     ax.set_aspect("equal")
@@ -412,17 +412,17 @@ def decompose_image(out_path="oti_decompose.png"):
     stage_arrow(xG, xT1, "lift into OTI",
                 r"(seed $e_0,\ldots,e_{M-1}$)")
 
-    # stage 2: the lifted whole seeded jet, still on root (NOT decomposed)
+    # stage 2: the lifted whole seeded OTI number, still on root (NOT decomposed)
     draw_input_tower(ax, xT1, layers, labels_side=None,
-                     caption="lifted jet field\n(on root)", decomposed=False)
+                     caption="lifted OTI number field\n(on root)", decomposed=False)
 
     # arrow 2: scatter / broadcast across ranks (the MPI movement)
     xT2 = 0.2
     stage_arrow(xT1, xT2, "scatter / broadcast", "across ranks")
 
-    # stage 3: the rank-decomposed seeded jet (labels on the right)
+    # stage 3: the rank-decomposed seeded OTI number (labels on the right)
     draw_input_tower(ax, xT2, layers, labels_side="right",
-                     caption="seeded input jet,\ndecomposed across ranks",
+                     caption="seeded input OTI number,\ndecomposed across ranks",
                      decomposed=True)
 
     top = layers[-1][0] * DZ
@@ -437,5 +437,5 @@ def decompose_image(out_path="oti_decompose.png"):
 
 if __name__ == "__main__":
     a = sys.argv[1:]
-    main(a[0] if len(a) >= 1 else "oti_jet_slices.png")
+    main(a[0] if len(a) >= 1 else "oti_number_slices.png")
     decompose_image(a[1] if len(a) >= 2 else "oti_decompose.png")

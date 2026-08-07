@@ -1,23 +1,23 @@
-// MPI + OTI global reduction: a custom MPI_Op that sums jets.
+// MPI + OTI global reduction: a custom MPI_Op that sums OTI numbers.
 //
 // Each rank owns a block of an N x N grid and accumulates a partial sum of
 // f(x, y; a, b) = sin(a*x) * exp(b*y), where the design parameters a, b are
-// SEEDED as OTI variables. One MPI_Allreduce with a custom jet-sum operator
-// folds the per-rank partial-sum jets into the global quantity of interest --
+// SEEDED as OTI variables. One MPI_Allreduce with a custom OTI-number-sum operator
+// folds the per-rank partial-sum OTI numbers into the global quantity of interest --
 // its value, gradient, AND Hessian w.r.t. (a, b) -- on every rank, from a single
 // reduction. That is the gradient and Hessian of a global objective over a
 // distributed field, with no adjoint and no extra communication.
 //
 // MPI has no built-in way to combine an otinum, so the reduction needs a user
-// MPI_Op. otinum/mpi.hpp provides it: oti::mpi::make_sum_op<Jet>() builds and
-// commits an operator that adds jets coefficient-wise, so the caller does not
+// MPI_Op. otinum/mpi.hpp provides it: oti::mpi::make_sum_op<OTI number>() builds and
+// commits an operator that adds OTI numbers coefficient-wise, so the caller does not
 // hand-roll an MPI_User_function. For a SUM this equals MPI_SUM over the raw
-// coefficients, but the op is the general mechanism (any associative jet combine)
+// coefficients, but the op is the general mechanism (any associative OTI number combine)
 // and it keeps the reduction in MPI_OTINUM units, consistent with the section.
 //
 // Verification differs from the gather/halo toys: a floating-point sum is not
 // associative, so the distributed result is NOT bit-identical to a serial sum --
-// the partition changes the summation order. We instead check the global jet
+// the partition changes the summation order. We instead check the global OTI number
 // against a serial recompute to a tight relative tolerance, compare every
 // coefficient against direct analytical formulas, and check the gradient again
 // with centred finite differences on a, b.
@@ -39,7 +39,7 @@
 
 // ---- problem definition ----------------------------------------------------
 
-using Jet = oti::otinum<2, 2, double>;   // value + grad + Hessian w.r.t. (a, b)
+using OTINumber = oti::otinum<2, 2, double>;   // value + grad + Hessian w.r.t. (a, b)
 static constexpr int  N      = 1000;     // grid is N x N
 static constexpr long TOTAL  = static_cast<long>(N) * N;
 static constexpr double A0    = 1.0;     // design parameter a
@@ -57,8 +57,8 @@ static inline void coords(long g, double& x, double& y)
     y = (g % N) * h;
 }
 
-// f(x, y; a, b) = sin(a*x) * exp(b*y), with a, b carried as jets.
-static inline Jet field_jet(long g, const Jet& a, const Jet& b)
+// f(x, y; a, b) = sin(a*x) * exp(b*y), with a, b carried as OTI numbers.
+static inline OTINumber field_oti_number(long g, const OTINumber& a, const OTINumber& b)
 {
     double x, y;
     coords(g, x, y);
@@ -83,9 +83,9 @@ static double mean_double(double a, double b)
 
 // Closed-form value, gradient, and normalized second-order Taylor
 // coefficients, averaged over the same discrete grid as the MPI calculation.
-static std::array<double, Jet::ncoeffs> analytic_mean()
+static std::array<double, OTINumber::ncoeffs> analytic_mean()
 {
-    std::array<double, Jet::ncoeffs> out{};
+    std::array<double, OTINumber::ncoeffs> out{};
     for (long g = 0; g < TOTAL; ++g) {
         double x, y;
         coords(g, x, y);
@@ -119,25 +119,25 @@ int main(int argc, char** argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    // ---- 1. commit the datatype and the custom jet-sum reduction op --------
+    // ---- 1. commit the datatype and the custom OTI-number-sum reduction op --------
     // Both come straight from otinum/mpi.hpp -- no hand-rolled MPI_User_function.
-    MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<Jet>();
-    MPI_Op MPI_OTI_SUM = oti::mpi::make_sum_op<Jet>();
+    MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<OTINumber>();
+    MPI_Op MPI_OTI_SUM = oti::mpi::make_sum_op<OTINumber>();
 
     // ---- 2. seed the design parameters and sum this rank's block -----------
-    const Jet a = Jet::variable(0, A0);   // A0 + e_0
-    const Jet b = Jet::variable(1, B0);   // B0 + e_1
+    const OTINumber a = OTINumber::variable(0, A0);   // A0 + e_0
+    const OTINumber b = OTINumber::variable(1, B0);   // B0 + e_1
 
     long start = 0, count = 0;
     block_range(rank, size, start, count);
 
-    Jet local(0.0);
-    for (long k = 0; k < count; ++k) local += field_jet(start + k, a, b);
+    OTINumber local(0.0);
+    for (long k = 0; k < count; ++k) local += field_oti_number(start + k, a, b);
 
-    // ---- 3. one Allreduce folds the partial-sum jets into the global QoI ----
-    Jet global(0.0);
+    // ---- 3. one Allreduce folds the partial-sum OTI numbers into the global QoI ----
+    OTINumber global(0.0);
     MPI_Allreduce(&local, &global, 1, MPI_OTINUM, MPI_OTI_SUM, MPI_COMM_WORLD);
-    const Jet qoi = global * (1.0 / static_cast<double>(TOTAL));   // mean field
+    const OTINumber qoi = global * (1.0 / static_cast<double>(TOTAL));   // mean field
 
     // ---- 4. report + verify on rank 0 --------------------------------------
     int failures = 0;
@@ -160,11 +160,11 @@ int main(int argc, char** argv)
                     qoi.coeff(oti::sparse({{1, 2}})));
 
         // (a) distributed vs serial recompute (relative -- sums are not associative)
-        Jet ser(0.0);
-        for (long g = 0; g < TOTAL; ++g) ser += field_jet(g, a, b);
+        OTINumber ser(0.0);
+        for (long g = 0; g < TOTAL; ++g) ser += field_oti_number(g, a, b);
         ser = ser * (1.0 / static_cast<double>(TOTAL));
         double max_rel = 0.0;
-        for (int c = 0; c < Jet::ncoeffs; ++c) {
+        for (int c = 0; c < OTINumber::ncoeffs; ++c) {
             const double s = ser[c];
             const double rel = std::fabs(qoi[c] - s) / (std::fabs(s) + 1e-300);
             if (rel > max_rel) max_rel = rel;
@@ -176,7 +176,7 @@ int main(int argc, char** argv)
 
         // (b) every coefficient vs independent closed-form derivative formulas
         const auto exact = analytic_mean();
-        const std::array<double, Jet::ncoeffs> got = {
+        const std::array<double, OTINumber::ncoeffs> got = {
             qoi.coeff(oti::sparse({})),
             qoi.coeff(oti::sparse({{0, 1}})),
             qoi.coeff(oti::sparse({{1, 1}})),
@@ -185,7 +185,7 @@ int main(int argc, char** argv)
             qoi.coeff(oti::sparse({{1, 2}})),
         };
         double max_abs_analytic = 0.0;
-        for (int c = 0; c < Jet::ncoeffs; ++c)
+        for (int c = 0; c < OTINumber::ncoeffs; ++c)
             max_abs_analytic =
                 std::max(max_abs_analytic, std::fabs(got[c] - exact[c]));
         const bool analytic_ok = max_abs_analytic <= ANALYTIC_TOL;

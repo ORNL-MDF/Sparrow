@@ -1,19 +1,19 @@
 The Datatype Helper
 ===================
 
-The optional header ``otinum/mpi.hpp`` provides the committed jet datatype through
+The optional header ``otinum/mpi.hpp`` provides the committed OTI number datatype through
 ``oti::mpi::make_datatype<T>()``. It is deliberately **not** part of the
 ``otinum.hpp`` umbrella, so the core headers stay MPI-free and non-MPI builds
-carry no dependency. Include it and ask for a datatype that describes one jet:
+carry no dependency. Include it and ask for a datatype that describes one OTI number:
 
 .. code-block:: cpp
 
    #include "otinum/otinum.hpp"
    #include "otinum/mpi.hpp"
 
-   using Jet = oti::otinum<2, 2, double>;   // value + grad + Hessian, 6 coeffs
+   using OTINumber = oti::otinum<2, 2, double>;   // value + grad + Hessian, 6 coeffs
 
-   MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<Jet>();
+   MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<OTINumber>();
    // ... use MPI_OTINUM in sends / receives / collectives ...
    oti::mpi::free_datatype(MPI_OTINUM);
 
@@ -26,6 +26,6 @@ base element for the derived datatypes a communicating solver needs later
 (``MPI_Type_vector`` for strided halos, ``MPI_Type_indexed`` for unstructured
 ghost-node lists).
 
-Nothing about this depends on a GPU or on Kokkos -- the datatype describes a jet
+Nothing about this depends on a GPU or on Kokkos -- the datatype describes an OTI number
 in plain host memory, and the same committed handle works unchanged for
 device-resident buffers if you do bring Kokkos.

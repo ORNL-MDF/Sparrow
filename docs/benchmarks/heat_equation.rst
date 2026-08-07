@@ -3,7 +3,7 @@ Heat Equation: Optimizations Stacked End-to-End
 
 The isolation benchmarks each flip exactly one optimization and hold everything
 else fixed. This page is the culmination: a real, end-to-end PDE solve -- a 3D
-heat equation with an OTI sensitivity jet at every node -- with the same
+heat equation with an OTI sensitivity OTI number at every node -- with the same
 optimizations switched on one at a time, so the per-isolation results can be
 seen compounding in production.
 
@@ -71,7 +71,7 @@ to the no-product-table baseline by about (``N=41``, source term hoisted):
   stage and holding through the fused stages. The alignment stage is the big
   jump, exactly as the standalone stencil-gather numbers predict.
 * ``double``: ``1.8x`` at lookup easing to ``2.0x`` at fused SoA -- a flatter
-  curve, because the larger double jets are less memory-bound at this shape.
+  curve, because the larger double OTI numbers are less memory-bound at this shape.
 
 The per-node source-division variant (more division work per node) leans harder
 on the same optimizations and reaches about ``9.2x`` for ``float``.
@@ -86,11 +86,11 @@ Two details tie back to the isolation studies:
 
 * The dominant ``float`` speedup arrives at the **aligned** stage, consistent
   with the alignment page: the stiffness gather is the memory-bound kernel, and
-  aligning the small ``float`` jets lets its scattered neighbor loads coalesce.
+  aligning the small ``float`` OTI numbers lets its scattered neighbor loads coalesce.
 * The **SoA** stage is only marginal here -- and slightly *hurts* the ``float``
   per-node variant -- consistent with the layout page: the stiffness gather is a
-  small-jet gather, where AoS wins. So the production heat layout stays AoS; SoA
-  is the tool for large-jet streaming, not this solve.
+  small OTI-number gather, where AoS wins. So the production heat layout stays AoS; SoA
+  is the tool for large OTI-number streaming, not this solve.
 
 Why the OTI overhead grows with problem size
 ---------------------------------------------
@@ -105,7 +105,7 @@ GTX 1650:
    :alt: OTI/base wall-time ratio vs computational complexity
    :width: 100%
 
-The intuitive guess is that the overhead grows because the larger OTI jet costs
+The intuitive guess is that the overhead grows because the larger OTI number costs
 more memory traffic. The per-node-update decomposition shows the mechanism is
 actually the opposite of "OTI gets more expensive": it is the *base* solve being
 under-utilized at small sizes. Plotting wall time *per node-update* (lower means

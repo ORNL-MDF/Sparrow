@@ -11,7 +11,7 @@ namespace {
 // Fill an otinum with distinct, element-dependent coefficients so layout bugs
 // (swapped strides, off-by-one) cannot cancel out.
 template <class T>
-T make_jet(std::size_t i)
+T make_oti_number(std::size_t i)
 {
     T out;
     for (int k = 0; k < T::ncoeffs; ++k) {
@@ -38,11 +38,11 @@ void check_layout_and_roundtrip()
                   "span must mirror the value type's coefficient count");
 
     for (std::size_t i = 0; i < n; ++i) {
-        span.store(i, make_jet<T>(i));
+        span.store(i, make_oti_number<T>(i));
     }
 
     for (std::size_t i = 0; i < n; ++i) {
-        T const expected = make_jet<T>(i);
+        T const expected = make_oti_number<T>(i);
         for (int k = 0; k < T::ncoeffs; ++k) {
             assert(buffer[static_cast<std::size_t>(k) * n + i] == expected[k]);
             assert(span.coeff(i, k) == expected[k]);
@@ -72,13 +72,13 @@ void check_arithmetic_matches_aos()
     oti::soa_span<M, N, Coeff> sy(ys.data(), n);
 
     for (std::size_t i = 0; i < n; ++i) {
-        sx.store(i, make_jet<T>(i));
-        sy.store(i, make_jet<T>(i + n));
+        sx.store(i, make_oti_number<T>(i));
+        sy.store(i, make_oti_number<T>(i + n));
     }
 
     for (std::size_t i = 0; i < n; ++i) {
-        T const a = make_jet<T>(i);
-        T const b = make_jet<T>(i + n);
+        T const a = make_oti_number<T>(i);
+        T const b = make_oti_number<T>(i + n);
         T const via_aos = a * b + a;
         T const via_soa = sx.load(i) * sy.load(i) + sx.load(i);
         for (int k = 0; k < T::ncoeffs; ++k) {

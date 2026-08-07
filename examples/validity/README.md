@@ -1,7 +1,7 @@
 # Validity examples — analytic intuition-builders
 
 Nine tiny, hand-checkable examples for `otinum/validity.hpp`. Each builds an OTI
-jet of a **known** function and exercises `evaluate` / `truncation_error` /
+OTI number of a **known** function and exercises `evaluate` / `truncation_error` /
 `is_trusted` / `validity_radius` / `error_sensitivity`, so you can see exactly what
 the trust analysis does on cases where the answer is obvious.
 
@@ -17,7 +17,7 @@ python plot_validity_examples.py   # writes figures/ex1..ex9.png
 | 2 | `1/(1-x)` expanded toward its pole | a **nearby singularity collapses the reach** (and the error goes asymmetric) | reach `= √τ·(1−x₀)` |
 | 3 | `1+2x−y+x²+xy+y²` | pure quadratic ⇒ **order-2 estimate is exact** (trust ellipse = exact level set) | residual `~1e-16` |
 | 4 | `exp(x)+exp(y)+0.5xy` | **coupling**: tilted ellipse, box corners overshoot | corner error `= 3×` budget; blame splits 50/50 |
-| 5 | `exp(x)` as `⟨1,3⟩` | the **`model_order` trade-off**: certify linear vs quadratic from one jet | reach `0.316 → 0.669` |
+| 5 | `exp(x)` as `⟨1,3⟩` | the **`model_order` trade-off**: certify linear vs quadratic from one OTI number | reach `0.316 → 0.669` |
 | 6 | `2+sin(x)` | a **vanishing leading term fools the estimate** (order-2 ≡ 0 ⇒ false ∞ reach) | naive reach `→ ∞`; honest `(6·budget)^⅓ = 0.843` |
 | 7 | `exp(x)+exp(y)+0.5xy` | **`error_sensitivity` as a control step**: descend `−sign(E)∇E` back under budget | trusted in 3 steps |
 | 8 | `1+x²+100y²` | **anisotropy**: a highly eccentric trust sliver | reachₓ/reach_y `= 10` |
@@ -79,9 +79,9 @@ Note `f₀ ≠ 1` now matters — the subtitle prints `f₀` and the resulting b
 
 These two exercise the part `validity.hpp` calls "THE thing to get right": you certify
 an order-`model_order` surrogate, and its leading truncation error is the
-order-`(model_order+1)` band, so the jet must be computed at least one order higher.
+order-`(model_order+1)` band, so the OTI number must be computed at least one order higher.
 
-- **Example 5 — the trade-off.** One `otinum<1,3>` jet of `exp(x)`, certified two ways
+- **Example 5 — the trade-off.** One `otinum<1,3>` OTI number of `exp(x)`, certified two ways
   via the `model_order` argument to `evaluate`/`truncation_error`/`validity_radius`:
   `model_order=1` trusts `1+h` (order-2 = error), `model_order=2` trusts `1+h+h²/2`
   (order-3 = error). Trusting the higher-order model grows the reach
@@ -92,7 +92,7 @@ order-`(model_order+1)` band, so the jet must be computed at least one order hig
   all-zero error band, reports an effectively **infinite reach**, and `is_trusted`
   returns true for every `h` — even though the real error is **cubic** (`≈|h³/6|`).
   Computing one extra order (`otinum<1,3>`, certify `model_order=2`) exposes the cubic
-  band and restores an honest reach `(6·budget)^⅓ = 0.843`. Moral: size the jet so the
+  band and restores an honest reach `(6·budget)^⅓ = 0.843`. Moral: size the OTI number so the
   leading *non-zero* dropped term is the one the estimate inspects. (The `+2` keeps
   `f₀ ≠ 0` so the relative budget `τ|f₀|` is well defined.)
 

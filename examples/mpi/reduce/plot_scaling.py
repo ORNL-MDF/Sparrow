@@ -55,7 +55,7 @@ def main(csv_path="reduce_scaling.csv", out_path="mpi_reduce_scaling.png"):
     ax_latency.legend(frameon=False)
 
     fig.suptitle(
-        "Global QoI reduction: local work scales; one-jet collective stays small"
+        "Global QoI reduction: local work scales; one-OTI-number collective stays small"
     )
     fig.tight_layout()
     fig.savefig(out_path, dpi=220, bbox_inches="tight")

@@ -88,7 +88,7 @@ magnitude sampling budget, with no sampling noise in the result.
 Sources
 -------
 
-``uq_max_temperature.cpp`` (the OTI solve, the QoI jet export, and the Monte
+``uq_max_temperature.cpp`` (the OTI solve, the QoI OTI number export, and the Monte
 Carlo driver) and ``uq_moment_analysis.py`` (Gauss--Hermite moments, KL
 divergence, the figure), on the `oti-analysis-and-benchmarks branch
 <https://github.com/Samm-Py/heat_equation/tree/oti-analysis-and-benchmarks>`_

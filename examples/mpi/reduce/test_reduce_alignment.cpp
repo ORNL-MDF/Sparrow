@@ -6,10 +6,10 @@
 // under-aligned for an over-aligned otinum (alignof 16, or 32 for the byte-size-
 // multiple-of-32 shapes promoted by the 32-byte alignment rung in core.hpp).
 // reduce_fn must NOT bind those buffers as `otinum&` directly: that is misaligned
-// UB and, because the jet arithmetic emits aligned vector loads, can fault. It
+// UB and, because the OTI number arithmetic emits aligned vector loads, can fault. It
 // copies each element through a correctly aligned local with memcpy instead.
 //
-// This test exercises exactly that: it places jet data at a deliberately
+// This test exercises exactly that: it places OTI number data at a deliberately
 // UNDER-aligned offset (8-aligned, not 32) and runs reduce_fn over it, for the
 // promoted alignas(32) shapes and an aligned control. It verifies the values are
 // correct AND -- crucially -- must be built with -fsanitize=undefined so the
@@ -30,7 +30,7 @@
 #include "otinum/otinum.hpp"
 #include "otinum/mpi.hpp"
 
-// Place n jets at a deliberately under-aligned offset inside buf: 32-byte align
+// Place n OTI numbers at a deliberately under-aligned offset inside buf: 32-byte align
 // the block, then push by 8 -- valid for the underlying doubles/floats, but NOT
 // 32-aligned, so a direct otinum& bind would be misaligned for alignas(32) T.
 template <class T>
@@ -57,7 +57,7 @@ static bool sum_on_misaligned(const char* tag, int n)
 
     MPI_Datatype dt = MPI_DOUBLE;  // unused by reduce_fn; just a valid handle
     int len = n;
-    oti::mpi::reduce_fn<T, oti::mpi::add_jets>(in, inout, &len, &dt);
+    oti::mpi::reduce_fn<T, oti::mpi::add_oti_numbers>(in, inout, &len, &dt);
 
     bool ok = true;
     for (int i = 0; i < n; ++i) {

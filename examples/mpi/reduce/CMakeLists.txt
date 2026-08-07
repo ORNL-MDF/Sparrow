@@ -15,7 +15,7 @@ find_package(MPI REQUIRED)
 add_executable(mpi_reduce_before main_before.cpp)
 target_link_libraries(mpi_reduce_before PRIVATE MPI::MPI_CXX)
 
-# The OTI version (after): custom MPI_Op over jets -> gradient + Hessian.
+# The OTI version (after): custom MPI_Op over OTI numbers -> gradient + Hessian.
 add_executable(mpi_oti_reduce main.cpp)
 target_include_directories(mpi_oti_reduce PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../include)
 target_link_libraries(mpi_oti_reduce PRIVATE MPI::MPI_CXX)
@@ -25,7 +25,7 @@ add_executable(test_reduce_ops test_reduce_ops.cpp)
 target_include_directories(test_reduce_ops PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../include)
 target_link_libraries(test_reduce_ops PRIVATE MPI::MPI_CXX)
 
-# Compliance test over the over-aligned (alignas(32)) jet shapes promoted by the
+# Compliance test over the over-aligned (alignas(32)) OTI number shapes promoted by the
 # 32-byte alignment rung: sum/prod/maxloc/minloc bit-exact on real MPI buffers.
 add_executable(test_reduce_promoted test_reduce_promoted.cpp)
 target_include_directories(test_reduce_promoted PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../include)

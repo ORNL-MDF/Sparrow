@@ -33,12 +33,12 @@ static constexpr long SAMPLE_STRIDE = 200;   // ~5000 sampled grid points
 // Normalized Taylor coefficient -> partial derivative: d^|a|f/... = coeff * a!.
 // (a! = product of factorials of the per-variable orders.)
 template <class T>
-static double deriv(T const& jet, int dx, int dy)
+static double deriv(T const& oti_number, int dx, int dy)
 {
     double fact = 1.0;
     for (int k = 2; k <= dx; ++k) fact *= k;
     for (int k = 2; k <= dy; ++k) fact *= k;
-    return static_cast<double>(jet.coeff(oti::sparse(
+    return static_cast<double>(oti_number.coeff(oti::sparse(
                dx && dy ? std::initializer_list<oti::sparse_index>{{0, dx}, {1, dy}}
                : dx     ? std::initializer_list<oti::sparse_index>{{0, dx}}
                : dy     ? std::initializer_list<oti::sparse_index>{{1, dy}}

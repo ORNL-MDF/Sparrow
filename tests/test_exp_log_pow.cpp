@@ -85,7 +85,7 @@ int main()
         expect_near(e.partial({1}), c * gauss);
         expect_near(e.partial({2}), -2.0 * x0 * c * gauss);
         expect_near(e.partial({3}), (4.0 * x0 * x0 - 2.0) * c * gauss);
-        // Odd symmetry, jet-wide: erf(-v) = -erf(v).
+        // Odd symmetry, OTI-number-wide: erf(-v) = -erf(v).
         expect_all_near(oti::erf(-v), -e, 1e-12);
 
         // erfc: real part from the dedicated scalar (no 1 - erf cancellation),

@@ -3,7 +3,7 @@
 //
 // Unlike the register-resident kernel microbenchmark (which reps many ops per
 // element and is compute-bound), each kernel here makes exactly one trip
-// through memory per element -- two jet reads and one jet write -- so the
+// through memory per element -- two OTI number reads and one OTI number write -- so the
 // measured rate is dominated by the access pattern the layout produces. The
 // reported figure is effective bandwidth (bytes moved / time); the AoS-vs-SoA
 // ratio is the layout's win or loss.
@@ -40,7 +40,7 @@ KOKKOS_FORCEINLINE_FUNCTION T apply(T x, T y, typename T::coeff_type s)
 
 // Deterministic element-dependent fill, same for both layouts.
 template <class T>
-KOKKOS_FORCEINLINE_FUNCTION T fill_jet(std::size_t i, int salt)
+KOKKOS_FORCEINLINE_FUNCTION T fill_oti_number(std::size_t i, int salt)
 {
     using Coeff = typename T::coeff_type;
     T out;
@@ -62,8 +62,8 @@ result bench_aos(std::size_t n, int reps)
     Kokkos::View<T*> x("x", n);
     Kokkos::View<T*> y("y", n);
     Kokkos::parallel_for("init_aos", n, KOKKOS_LAMBDA(std::size_t i) {
-        x(i) = fill_jet<T>(i, 3);
-        y(i) = fill_jet<T>(i, 5);
+        x(i) = fill_oti_number<T>(i, 3);
+        y(i) = fill_oti_number<T>(i, 5);
     });
     Kokkos::fence();
 
@@ -107,8 +107,8 @@ result bench_soa(std::size_t n, int reps)
     Span const x(xs.data(), n);
     Span const y(ys.data(), n);
     Kokkos::parallel_for("init_soa", n, KOKKOS_LAMBDA(std::size_t i) {
-        x.store(i, fill_jet<T>(i, 3));
-        y.store(i, fill_jet<T>(i, 5));
+        x.store(i, fill_oti_number<T>(i, 3));
+        y.store(i, fill_oti_number<T>(i, 5));
     });
     Kokkos::fence();
 
@@ -147,7 +147,7 @@ template <class T, Op op>
 void compare(char const* tag, int reps)
 {
     // Size each array to ~96 MiB so every pass streams from device/main
-    // memory rather than cache, independent of the jet size.
+    // memory rather than cache, independent of the OTI number size.
     std::size_t const n = (96u << 20) / sizeof(T);
 
     result const aos = bench_aos<T, op>(n, reps);

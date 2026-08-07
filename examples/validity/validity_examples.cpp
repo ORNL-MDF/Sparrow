@@ -1,6 +1,6 @@
 // Small analytic intuition-builders for otinum/validity.hpp.
 //
-// Each example builds an OTI jet of a KNOWN function by evaluating it in OTI
+// Each example builds an OTI number of a KNOWN function by evaluating it in OTI
 // arithmetic at an expansion point, then exercises evaluate / truncation_error /
 // is_trusted / validity_radius / error_sensitivity and writes CSVs the companion
 // plot_validity_examples.py turns into figures. Everything is hand-checkable.
@@ -188,8 +188,8 @@ static void example4()
                [](double hx, double hy) { return std::exp(hx) + std::exp(hy) + 0.5 * hx * hy; });
 }
 
-// ---- Example 5: the model_order trade-off -- one jet, linear vs quadratic ----
-// otinum<1,3> of exp(x): certify the SAME jet two ways. model_order=1 trusts the
+// ---- Example 5: the model_order trade-off -- one OTI number, linear vs quadratic ----
+// otinum<1,3> of exp(x): certify the SAME OTI number two ways. model_order=1 trusts the
 // linear surrogate 1+h; model_order=2 trusts 1+h+h^2/2. The error functions fold
 // in EVERY stored order above the model, so the linear reach (mo=1) accounts for
 // the order-2 AND order-3 bands -> ~0.301, slightly under the leading-order-only

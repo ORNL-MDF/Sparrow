@@ -195,7 +195,7 @@ void test_inverse_trig()
     expect_near(oti_deriv([](auto z) { return oti::asin(z); }, x0), 1.0 / std::sqrt(1.0 - x0 * x0));
     expect_near(oti_deriv([](auto z) { return oti::acos(z); }, x0), -1.0 / std::sqrt(1.0 - x0 * x0));
 
-    // Second derivatives (order-2 jet) match finite differences of the first.
+    // Second derivatives (order-2 OTI number) match finite differences of the first.
     {
         using T2 = oti::otinum<1, 2>;
         double const d2_atan = oti::atan(T2::variable(0, x0)).partial({2});
