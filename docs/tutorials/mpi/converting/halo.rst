@@ -11,7 +11,7 @@ The General Pattern
 Each rank owns an interior tile plus ghost cells that mirror edge values owned
 by neighbouring ranks. Before a local update reads those neighbours, the ranks
 exchange their boundary data to refresh the ghost cells. With OTI, each grid
-element is a complete jet, so the communication pattern is unchanged: MPI moves
+element is a complete OTI number, so the communication pattern is unchanged: MPI moves
 the value and all derivative coefficients together as one ``MPI_OTINUM``.
 
 .. figure:: ../../../_static/diagrams/mpi_halo.png
@@ -23,7 +23,7 @@ the value and all derivative coefficients together as one ``MPI_OTINUM``.
    planes show the value and first-order coefficients
    :math:`c_{e_0},c_{e_1},\ldots,c_{e_{M-1}}`; higher coefficients are grouped by
    total order, with vertical dots marking omitted directions and orders. Every
-   grid cell is one complete jet, and a halo exchange moves that whole tower into
+   grid cell is one complete OTI number, and a halo exchange moves that whole tower into
    a neighbouring ghost cell. Paired arrows show the two directions of each
    exchange; outward arrows indicate neighbours beyond the illustrated slice.
    The schematic is algebra-generic; the concrete solver below uses
@@ -68,30 +68,30 @@ Converting From Plain Double
 Cartesian ranks, the row/column halo exchange every iteration, verified bit-exact
 against a serial recompute. It produces the temperature field and nothing else.
 OTI-enabling it is the same family of changes as every other rung, with the halo
-twist that the datatypes are *derived* from the jet element:
+twist that the datatypes are *derived* from the OTI number element:
 
 .. code-block:: diff
 
    -using Scalar = double;
    +#include "otinum/otinum.hpp"                       // 1. otinum core
    +#include "otinum/mpi.hpp"                           //    MPI datatype helper
-   +using Jet = oti::otinum<2, 1, double>;              // 2. value + 2 sensitivities
+   +using OTINumber = oti::otinum<2, 1, double>;              // 2. value + 2 sensitivities
 
     // hot-wall boundary values
    -const Scalar T_WEST  = 1.0;
    -const Scalar T_SOUTH = 1.0;
-   +const Jet T_WEST  = Jet::variable(0, 1.0);          // 3. seed T_west = 1 + e_0
-   +const Jet T_SOUTH = Jet::variable(1, 1.0);          //    seed T_south = 1 + e_1
+   +const OTINumber T_WEST  = OTINumber::variable(0, 1.0);          // 3. seed T_west = 1 + e_0
+   +const OTINumber T_SOUTH = OTINumber::variable(1, 1.0);          //    seed T_south = 1 + e_1
 
     // ... the Jacobi stencil and the four Sendrecv calls keep their shape ...
 
-    // 4. build the halo datatypes on the jet element instead of MPI_DOUBLE
+    // 4. build the halo datatypes on the OTI number element instead of MPI_DOUBLE
    -MPI_Datatype row_type = MPI_DOUBLE;                  // a row is ny doubles
    -MPI_Type_vector(nx, 1, stride, MPI_DOUBLE, &MPI_COL);// a column is strided doubles
-   +MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<Jet>();  // one committed jet
-   +MPI_Type_vector(nx, 1, stride, MPI_OTINUM, &MPI_COL);// a column is strided jets
+   +MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<OTINumber>();  // one committed OTI number
+   +MPI_Type_vector(nx, 1, stride, MPI_OTINUM, &MPI_COL);// a column is strided OTI numbers
 
-   +// 5. read the sensitivities out of the converged jet
+   +// 5. read the sensitivities out of the converged OTI number
    +const double dudTw = s.coeff(oti::sparse({{0, 1}}));  // du/dT_west
    +const double dudTs = s.coeff(oti::sparse({{1, 1}}));  // du/dT_south
 
@@ -110,13 +110,13 @@ to which derivatives are requested:
 
 .. code-block:: cpp
 
-   using Jet = oti::otinum<2, 1, double>;          // value + d/dT_west + d/dT_south
+   using OTINumber = oti::otinum<2, 1, double>;          // value + d/dT_west + d/dT_south
 
-   const Jet T_WEST  = Jet::variable(0, 1.0);      // 1.0 + e_0
-   const Jet T_SOUTH = Jet::variable(1, 1.0);      // 1.0 + e_1
-   const Jet T_COLD  = Jet(0.0);
+   const OTINumber T_WEST  = OTINumber::variable(0, 1.0);      // 1.0 + e_0
+   const OTINumber T_SOUTH = OTINumber::variable(1, 1.0);      // 1.0 + e_1
+   const OTINumber T_COLD  = OTINumber(0.0);
 
-Every cell then converges to a jet whose coefficients are the temperature *and*
+Every cell then converges to an OTI number whose coefficients are the temperature *and*
 its derivative with respect to each wall -- the parameter sensitivity of the
 entire field, from one solve. The stencil code is unchanged; the arithmetic is
 overloaded, so ``(a + b + c + d) * 0.25`` propagates the derivatives
@@ -149,26 +149,26 @@ the wall temperature and never touched again, because a ``Sendrecv`` to or from
 The Two Halo Datatypes
 ^^^^^^^^^^^^^^^^^^^^^^
 
-This is where the committed jet element pays off a second time. Both halos are
-described in units of *jets*, built on ``MPI_OTINUM``:
+This is where the committed OTI number element pays off a second time. Both halos are
+described in units of *OTI numbers*, built on ``MPI_OTINUM``:
 
 .. code-block:: cpp
 
-   MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<Jet>();
+   MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<OTINumber>();
 
-   // Column halo (E/W): nx jets, one per row, strided by `stride` jets.
+   // Column halo (E/W): nx OTI numbers, one per row, strided by `stride` OTI numbers.
    MPI_Datatype MPI_COL;
    MPI_Type_vector(nx, 1, stride, MPI_OTINUM, &MPI_COL);
    MPI_Type_commit(&MPI_COL);
    // Row halo (N/S) is contiguous -> just `ny` of MPI_OTINUM, no derived type.
 
-A **row** (north/south neighbour) is a contiguous run of ``ny`` jets, so it ships
+A **row** (north/south neighbour) is a contiguous run of ``ny`` OTI numbers, so it ships
 as ``count = ny`` of ``MPI_OTINUM`` with no extra type. A **column** (east/west
-neighbour) is one jet per row, separated by a full row stride, so it needs
-``MPI_Type_vector`` *over* the jet element -- a derived datatype on a derived
-datatype. The stride is in jets, not bytes: MPI knows the extent of one
-``MPI_OTINUM`` is exactly ``sizeof(Jet)`` (the jet is padding-free, see
-:doc:`../index`), so the strided gather lands on jet boundaries with no
+neighbour) is one OTI number per row, separated by a full row stride, so it needs
+``MPI_Type_vector`` *over* the OTI number element -- a derived datatype on a derived
+datatype. The stride is in OTI numbers, not bytes: MPI knows the extent of one
+``MPI_OTINUM`` is exactly ``sizeof(OTINumber)`` (the OTI number is padding-free, see
+:doc:`../index`), so the strided gather lands on OTI number boundaries with no
 byte arithmetic.
 
 The Exchange
@@ -264,7 +264,7 @@ Build And Run
    ---
    process grid       : 2 x 2  (4 ranks)
    interior grid      : 128 x 128  (4000 Jacobi iterations)
-   verify vs serial   : PASS (bit-exact) (0 mismatching jets)
+   verify vs serial   : PASS (bit-exact) (0 mismatching OTI numbers)
    finite difference  : centred, h = 1.0e-06
      d/dT_west        : OTI = 0.1298201696, FD = 0.1298201695, |error| = 2.634e-11
      d/dT_south       : OTI = 0.1298201696, FD = 0.1298201696, |error| = 5.693e-11
@@ -280,4 +280,4 @@ comparison, so it is CI-gateable.
 The sample output doubles as a correctness check on the *derivatives*: the
 problem is linear and both walls are at 1.0, so the temperature equals the sum of
 the two sensitivities, and by symmetry across the diagonal the West and South
-sensitivities are equal -- which is exactly what the jet reports.
+sensitivities are equal -- which is exactly what the OTI number reports.

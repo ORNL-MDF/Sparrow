@@ -7,7 +7,7 @@ default element-major (array-of-structs) layout. The view changes where the
 bytes live, never what is computed: results are bit-identical to the default
 layout.
 
-It matters for one specific situation — large arrays of jets processed by GPU
+It matters for one specific situation — large arrays of OTI numbers processed by GPU
 kernels — and it is a measured loss everywhere else, so the second half of
 this tutorial is guidance on when *not* to use it.
 
@@ -59,7 +59,7 @@ The size test is what makes the promotion free. C++ requires ``sizeof`` to be a
 multiple of ``alignof``, so conditioning on the byte size guarantees the
 alignment never changes ``sizeof(otinum)`` and never inserts padding. A
 four-``float`` ``otinum<3, 1>`` is 16 bytes, so it is promoted to a 16-byte
-boundary and a whole jet loads or stores as one 128-bit transaction; a
+boundary and a whole OTI number loads or stores as one 128-bit transaction; a
 three-``double`` ``otinum<2, 1>`` is 24 bytes and keeps ``alignof(double)``:
 
 .. code-block:: cpp
@@ -68,10 +68,10 @@ three-``double`` ``otinum<2, 1>`` is 24 bytes and keeps ``alignof(double)``:
    static_assert(alignof(oti::otinum<2, 1>) == alignof(double));  // 24 bytes
 
 This is why the default layout is less naive than it first appears: an aligned
-jet is already a single wide vector access. It is also what lets the default
-layout hold the bandwidth peak for small first-order jets, and why the
+OTI number is already a single wide vector access. It is also what lets the default
+layout hold the bandwidth peak for small first-order OTI numbers, and why the
 gather-heavy float ``otinum<3, 1>`` case below *prefers* AoS — the
-coefficient-major view gives up that one-load-per-jet property. The alignment
+coefficient-major view gives up that one-load-per-OTI-number property. The alignment
 rule and the layout choice are measured independently in the
 :doc:`../benchmarks/gpu_optimization_workflow`.
 
@@ -80,7 +80,7 @@ A Complete Host Example
 
 The span itself has no Kokkos dependency; it works over any caller-owned
 buffer. The program below evaluates ``f(x, y) = x*x + 3*y`` for four elements,
-scatters the jets into a coefficient-major buffer, and gathers one back. The
+scatters the OTI numbers into a coefficient-major buffer, and gathers one back. The
 same source is available in the repository as ``examples/soa_layout.cpp``.
 
 .. literalinclude:: ../../examples/soa_layout.cpp
@@ -134,7 +134,7 @@ backing buffer is an ordinary flat ``Kokkos::View`` of coefficients:
    Span const x(xs.data(), n);
    Span const y(ys.data(), n);
 
-   Kokkos::parallel_for("jet_update", n, KOKKOS_LAMBDA(std::size_t i) {
+   Kokkos::parallel_for("oti_number_update", n, KOKKOS_LAMBDA(std::size_t i) {
        T const xi = x.load(i);   // coalesced gather
        T yi = y.load(i);
        oti::axpy(yi, 0.5, xi);   // ordinary register-resident arithmetic
@@ -149,7 +149,7 @@ When It Wins, When It Loses
 ---------------------------
 
 ``tests/benchmark_soa_layout.cpp`` measures both layouts over identical
-streaming kernels (two jet reads and one jet write per element, arrays far
+streaming kernels (two OTI number reads and one OTI number write per element, arrays far
 larger than cache) and checks that the checksums match bit-exactly. The
 benchmark is an extra target that the smoke-test configure in :doc:`kokkos_gpu`
 does not build, so reuse that tutorial's ``build-kokkos-gpu`` directory and
@@ -178,24 +178,24 @@ device, the ratios are the story):
 
 The measured picture, in both directions:
 
-* **GPU, jets with N >= 2: use the span.** The default layout falls off the
-  bandwidth peak for larger jets (down to ~3x-4x below peak in the worst
+* **GPU, OTI numbers with N >= 2: use the span.** The default layout falls off the
+  bandwidth peak for larger OTI numbers (down to ~3x-4x below peak in the worst
   cases) while the coefficient-major layout stays at the peak for every shape
   measured. Which default-layout shapes collapse is hard to predict —
   ``<3,3>`` ``double`` collapses while ``<3,3>`` ``float`` does not — so the
   span's real value on GPU is *predictability*: it never lost in any measured
   configuration.
-* **GPU, first-order jets (``<3,1>`` and similar): no benefit, and a measured
-  loss for gather patterns.** Small aligned jets already coalesce well enough
+* **GPU, first-order OTI numbers (``<3,1>`` and similar): no benefit, and a measured
+  loss for gather patterns.** Small aligned OTI numbers already coalesce well enough
   that both layouts sit at the bandwidth peak for streaming access. In the
   OTI heat-equation solver (``<3,1>``), the end-to-end double solve is exact
   parity, but the *float* solve runs up to ~20% slower under the span at
-  large grids: its stiffness kernel gathers dozens of neighbors' jets per
-  thread, and an AoS float ``<3,1>`` jet is a single 16-byte vector load —
+  large grids: its stiffness kernel gathers dozens of neighbors' OTI numbers per
+  thread, and an AoS float ``<3,1>`` OTI number is a single 16-byte vector load —
   an advantage the coefficient-major layout gives up. Streaming benchmarks
   cannot see this effect; measure kernels with neighbor gathers directly.
 * **CPU: keep the default layout.** The span *loses* on every CPU
-  configuration measured (0.5x-0.85x, worse for bigger jets). Each CPU thread
+  configuration measured (0.5x-0.85x, worse for bigger OTI numbers). Each CPU thread
   walks elements sequentially, so the default layout is one perfectly
   prefetchable stream per thread, while the coefficient-major gather splits it
   into ``ncoeffs`` strided streams that defeat the hardware prefetcher.

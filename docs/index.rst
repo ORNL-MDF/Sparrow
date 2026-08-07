@@ -28,7 +28,7 @@ rather than rewriting the kernel logic.
 The implementation includes focused C++ unit tests, Python examples for
 visualization and experimentation, single- and double-precision coefficient
 storage, and an optional Kokkos-enabled path for CPU and GPU backends. A
-built-in validity layer treats any jet as a local surrogate model and reports
+built-in validity layer treats any OTI number as a local surrogate model and reports
 the region over which its predictions stay within a tolerance
 (:doc:`tutorials/validity`). Together, these pieces provide a practical
 workflow for obtaining sensitivities from C++ simulation codes.

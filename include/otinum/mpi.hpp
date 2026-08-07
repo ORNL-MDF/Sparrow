@@ -9,7 +9,7 @@
 // Why this is so thin: otinum<M,N,Coeff> is a fixed-size contiguous block of
 // ncoeffs coefficients with no pointers, no heap, and (by the otinum_alignment
 // rule in core.hpp) no trailing padding. So an array of otinums is one packed
-// buffer, and a single committed MPI_Datatype describes one jet -- there is no
+// buffer, and a single committed MPI_Datatype describes one OTI number -- there is no
 // serialization layer to write. This header just builds and commits that type.
 
 #include <mpi.h>
@@ -87,8 +87,8 @@ template <class T>
 inline void free_datatype(MPI_Datatype& dt) noexcept { MPI_Type_free(&dt); }
 
 // --- value + location element for MAXLOC / MINLOC --------------------------
-// A plain extremum value is insufficient for a jet: at an exact tie, equal real
-// parts may carry different derivatives. Pair the jet with a unique application
+// A plain extremum value is insufficient for an OTI number: at an exact tie, equal real
+// parts may carry different derivatives. Pair the OTI number with a unique application
 // location (commonly an MPI rank or global mesh index), and resolve ties by the
 // smaller location just like MPI_MAXLOC / MPI_MINLOC.
 template <class T>
@@ -143,14 +143,14 @@ template <class T>
 // Op is a functor with `T operator()(const T& a, const T& b) const`. reduce_fn
 // adapts it to MPI's type-erased, buffer-oriented callback: MPI hands two raw
 // buffers of *len elements, and we apply Op across the batch. Op itself is the
-// real jet arithmetic -- the loop is only the ABI glue.
+// real OTI number arithmetic -- the loop is only the ABI glue.
 //
 // We must NOT reinterpret the MPI buffers as T* and index them directly. MPI
 // builds the datatype from MPI_DOUBLE/MPI_INT, so it only guarantees those
 // scalars' (<= 8-byte) alignment; the in/inout buffers it passes -- including
 // internal reduction temporaries -- may be under-aligned for an over-aligned T
 // (alignof(otinum) is 16 or, for 32-byte shapes, 32). A direct T& there is
-// misaligned UB, and because the jet arithmetic emits aligned vector loads it
+// misaligned UB, and because the OTI number arithmetic emits aligned vector loads it
 // can fault. So copy each element through a correctly-aligned local with memcpy
 // (the standard idiom for a possibly-underaligned buffer); the copies usually
 // optimize away, and the loads inside Op are then always well-aligned.
@@ -183,11 +183,11 @@ template <class T, class Op>
 // Combines for the shipped operators. add/mul are otinum::operator+ / operator*:
 // a sum is coefficient-wise, but a product is a convolution -- which is exactly
 // why it cannot be faked with MPI_SUM over the raw scalars.
-struct add_jets { template <class T> T operator()(T const& a, T const& b) const { return a + b; } };
-struct mul_jets { template <class T> T operator()(T const& a, T const& b) const { return a * b; } };
+struct add_oti_numbers { template <class T> T operator()(T const& a, T const& b) const { return a + b; } };
+struct mul_oti_numbers { template <class T> T operator()(T const& a, T const& b) const { return a * b; } };
 
 // MAXLOC / MINLOC compare the real coefficient and carry the complete winning
-// jet. Exact value ties select the smaller location, making the result explicit
+// OTI number. Exact value ties select the smaller location, making the result explicit
 // and deterministic when locations uniquely identify candidates.
 struct maxloc_by_value {
     template <class Located>
@@ -212,9 +212,9 @@ struct minloc_by_value {
 // Convenience builders for the common reductions. A reduction over MPI_OTINUM
 // then yields a quantity of interest carrying its derivatives, with no hand-rolled
 // user function. Extremum reductions operate on value_loc<T>, returning both the
-// winning jet and its location with MPI_MAXLOC-style tie handling.
-template <class T> [[nodiscard]] MPI_Op make_sum_op()  { return make_reduce_op<T, add_jets>(); }
-template <class T> [[nodiscard]] MPI_Op make_prod_op() { return make_reduce_op<T, mul_jets>(); }
+// winning OTI number and its location with MPI_MAXLOC-style tie handling.
+template <class T> [[nodiscard]] MPI_Op make_sum_op()  { return make_reduce_op<T, add_oti_numbers>(); }
+template <class T> [[nodiscard]] MPI_Op make_prod_op() { return make_reduce_op<T, mul_oti_numbers>(); }
 template <class T> [[nodiscard]] MPI_Op make_maxloc_op()
 {
     return make_reduce_op<value_loc<T>, maxloc_by_value>();

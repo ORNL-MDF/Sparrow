@@ -5,8 +5,8 @@
 // MPI_Allreduce(MPI_SUM) over doubles. It gets the *value* and nothing else.
 //
 // Converting it to OTI (see main.cpp and converting/reduce.rst) is five changes:
-// swap the scalar type for a jet, seed a and b as variables, register a custom
-// MPI_Op that sums jets, reduce over MPI_OTINUM instead of MPI_DOUBLE, and read
+// swap the scalar type for an OTI number, seed a and b as variables, register a custom
+// MPI_Op that sums OTI numbers, reduce over MPI_OTINUM instead of MPI_DOUBLE, and read
 // the derivative coefficients out. The QoI then carries its gradient and Hessian
 // w.r.t. (a, b). The summation loop and the decomposition do not change.
 //

@@ -1,7 +1,7 @@
-// Trust-region basics for a jet used as a surrogate model.
+// Trust-region basics for an OTI number used as a surrogate model.
 //
 // f(x, y) = exp(x) + exp(y) + x*y/2 is expanded at (0, 0) into an
-// otinum<2, 2> jet: one order ABOVE the linear model we intend to trust, so
+// otinum<2, 2> OTI number: one order ABOVE the linear model we intend to trust, so
 // the order-2 coefficients are available as the truncation-error estimate.
 // The oti::validity primitives then answer, without re-evaluating f:
 //   - what does the linear surrogate predict at a step h?
@@ -24,7 +24,7 @@ int main()
     T x = T::variable(0, 0.0);
     T y = T::variable(1, 0.0);
     T f = oti::exp(x) + oti::exp(y) + 0.5 * x * y;
-    // Jet at (0, 0): value 2, gradient (1, 1), stored second-order
+    // OTI number at (0, 0): value 2, gradient (1, 1), stored second-order
     // coefficients c20 = 0.5, c11 = 0.5, c02 = 0.5.
 
     double const tau = 0.05;                     // 5% relative tolerance

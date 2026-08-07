@@ -26,12 +26,12 @@ target_include_directories(otinum_headers INTERFACE
 #
 # -Wno-psabi: shapes sized a multiple of 32 bytes are alignas(32) (the 256-bit
 # load rung in otinum_alignment), and passing such a type by value triggers a
-# GCC/Clang note that the parameter-passing ABI for >16-byte alignment changed
-# in GCC 4.6. It is purely informational for a single consistent toolchain, so
+# GCC note that the parameter-passing ABI for >16-byte alignment changed in
+# GCC 4.6. It is purely informational for a single consistent toolchain, so
 # silence it rather than spam every consumer build that instantiates one.
 target_compile_options(otinum_headers INTERFACE
     $<$<CXX_COMPILER_ID:Clang,AppleClang>:-fbracket-depth=65536>
-    $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wno-psabi>
+    $<$<CXX_COMPILER_ID:GNU>:-Wno-psabi>
 )
 
 if(OTI_BUILD_TESTS OR OTI_ENABLE_KOKKOS)

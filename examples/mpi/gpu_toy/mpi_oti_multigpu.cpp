@@ -25,17 +25,17 @@
 #include "otinum/otinum.hpp"
 #include "otinum/mpi.hpp"
 
-using Jet = oti::otinum<2, 2, double>;
+using OTINumber = oti::otinum<2, 2, double>;
 static constexpr int N = 1000;
 static constexpr long TOTAL = static_cast<long>(N) * N;
 static constexpr int TOKEN_TAG = 99;
 
-KOKKOS_INLINE_FUNCTION Jet evaluate(long g)
+KOKKOS_INLINE_FUNCTION OTINumber evaluate(long g)
 {
     const double h = 1.0 / (N - 1);
     const long i = g / N, j = g % N;
-    Jet x = Jet::variable(0, i * h);
-    Jet y = Jet::variable(1, j * h);
+    OTINumber x = OTINumber::variable(0, i * h);
+    OTINumber y = OTINumber::variable(1, j * h);
     return oti::sin(x) * oti::exp(y);
 }
 
@@ -65,7 +65,7 @@ int main(int argc, char** argv)
     settings.set_device_id(my_device);
     Kokkos::initialize(settings);
     {
-        MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<Jet>();
+        MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<OTINumber>();
 
         long start = 0, count = 0;
         block_range(rank, size, start, count);
@@ -78,7 +78,7 @@ int main(int argc, char** argv)
         }
         // --- this rank now holds the GPU to itself ---
         const double t0 = MPI_Wtime();
-        Kokkos::View<Jet*> d_local("d_local", count);
+        Kokkos::View<OTINumber*> d_local("d_local", count);
         Kokkos::parallel_for(
             "evaluate", count,
             KOKKOS_LAMBDA(int k) { d_local(k) = evaluate(start + k); });
@@ -89,7 +89,7 @@ int main(int argc, char** argv)
         Kokkos::deep_copy(h_local, d_local);
 
         std::printf("rank %d/%d: bound to GPU %d of %d | exclusive device turn: "
-                    "%6.2f ms for %ld jets\n",
+                    "%6.2f ms for %ld OTI numbers\n",
                     rank, size, my_device, num_gpus, dt * 1000.0, count);
         std::fflush(stdout);
         // --- release: hand the GPU to the next rank ---
@@ -99,7 +99,7 @@ int main(int argc, char** argv)
 
         // ---- combine slices over MPI (host-staged gather to rank 0) ---------
         std::vector<int> recvcounts, displs;
-        std::vector<Jet> global;
+        std::vector<OTINumber> global;
         if (rank == 0) {
             recvcounts.resize(static_cast<size_t>(size));
             displs.resize(static_cast<size_t>(size));
@@ -119,7 +119,7 @@ int main(int argc, char** argv)
 
         // ---- rank 0 verifies the assembled grid (device recompute) ----------
         if (rank == 0) {
-            Kokkos::View<Jet*> d_ref("d_ref", TOTAL);
+            Kokkos::View<OTINumber*> d_ref("d_ref", TOTAL);
             Kokkos::parallel_for(
                 "reference", TOTAL,
                 KOKKOS_LAMBDA(long g) { d_ref(g) = evaluate(g); });
@@ -128,12 +128,12 @@ int main(int argc, char** argv)
             long mism = 0;
             for (long g = 0; g < TOTAL; ++g) {
                 if (std::memcmp(&global[static_cast<size_t>(g)], &h_ref(g),
-                                sizeof(Jet)) != 0) {
+                                sizeof(OTINumber)) != 0) {
                     ++mism;
                 }
             }
             std::printf("\n%d ranks took exclusive turns on %d physical GPU(s); "
-                        "assembled %ld jets.\nverify: %s (%ld mismatches)\n",
+                        "assembled %ld OTI numbers.\nverify: %s (%ld mismatches)\n",
                         size, num_gpus, TOTAL,
                         mism == 0 ? "PASS (bit-exact)" : "FAIL", mism);
             if (num_gpus <= 1 && size > 1) {

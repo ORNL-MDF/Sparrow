@@ -25,7 +25,7 @@ rather than requiring them:
      - core headers:     plain C++17, no dependencies
      - OTI_ENABLE_KOKKOS: makes otinum device-callable (uses Kokkos::Array,
                           annotates arithmetic for device kernels)
-     - otinum/mpi.hpp:    one committed MPI_Datatype per jet shape
+     - otinum/mpi.hpp:    one committed MPI_Datatype per OTI number shape
 
 So you do not "add Sparrow and then get MPI and Kokkos." You bring your own
 Kokkos and MPI; Sparrow is a thin header layer that knows how to ride on
@@ -47,25 +47,25 @@ Step 2 -- Make It Device-Callable (Kokkos)
 
 Define ``OTI_ENABLE_KOKKOS``. This switches the coefficient container from
 ``std::array`` to ``Kokkos::Array`` and annotates the arithmetic so it is
-callable inside device kernels. An array of jets is then a ``Kokkos::View<Jet*>``
-and your ``parallel_for`` body computes jets on the device exactly as it would on
+callable inside device kernels. An array of OTI numbers is then a ``Kokkos::View<OTINumber*>``
+and your ``parallel_for`` body computes OTI numbers on the device exactly as it would on
 the host (see :doc:`kokkos_gpu`). The CUDA build requires Kokkos's
 ``nvcc_wrapper`` as the C++ compiler.
 
 Step 3 -- Distribute It (MPI)
 -----------------------------
 
-Include the optional ``otinum/mpi.hpp`` and commit one datatype per jet shape:
+Include the optional ``otinum/mpi.hpp`` and commit one datatype per OTI number shape:
 
 .. code-block:: cpp
 
    #include "otinum/mpi.hpp"
 
-   MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<Jet>();
+   MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<OTINumber>();
    // ... sends / receives / collectives in units of MPI_OTINUM ...
    oti::mpi::free_datatype(MPI_OTINUM);
 
-Because a jet is a contiguous, padding-free block of coefficients, this datatype
+Because an OTI number is a contiguous, padding-free block of coefficients, this datatype
 is all MPI needs -- there is no serialization layer. The same ``MPI_OTINUM`` is
 the base element for the derived datatypes a real solver needs (``MPI_Type_vector``
 for strided halos, ``MPI_Type_indexed`` for unstructured ghost-node lists). See
@@ -74,7 +74,7 @@ for strided halos, ``MPI_Type_indexed`` for unstructured ghost-node lists). See
 Step 4 -- The MPI + GPU Transport Pattern
 -----------------------------------------
 
-When the jets live on a device *and* you distribute them, the question is how the
+When the OTI numbers live on a device *and* you distribute them, the question is how the
 buffer reaches MPI. First, the good news: the committed datatype does **not**
 change for GPU data. An ``otinum``'s layout (``sizeof``, alignment, member order)
 is identical in host and device memory, so ``MPI_Type_contiguous(ncoeffs,
@@ -183,17 +183,17 @@ queries ``MPIX_Query_cuda_support()`` at runtime and falls back to host staging 
 the same binary then runs correctly on a laptop and on a GPU cluster.
 
 **The tightly-packed contract.** ``make_datatype`` ``static_assert``\ s that
-``sizeof(Jet) == ncoeffs * sizeof(Coeff)`` (no trailing padding), so a contiguous
+``sizeof(OTINumber) == ncoeffs * sizeof(Coeff)`` (no trailing padding), so a contiguous
 datatype matches the array stride. This holds for every ``otinum`` shape by
-construction; you do not need to check it yourself, but if you ever wrap a jet in
+construction; you do not need to check it yourself, but if you ever wrap an OTI number in
 a larger aligned struct, describe that element with ``MPI_Type_create_resized``.
 
 Checklist
 ---------
 
 * Swap your kernel's scalar type to ``otinum`` -- no logic change.
-* Define ``OTI_ENABLE_KOKKOS`` and use ``Kokkos::View<Jet*>`` for device arrays.
-* Commit ``oti::mpi::make_datatype<Jet>()`` once per shape; send jets in jet units.
+* Define ``OTI_ENABLE_KOKKOS`` and use ``Kokkos::View<OTINumber*>`` for device arrays.
+* Commit ``oti::mpi::make_datatype<OTINumber>()`` once per shape; send OTI numbers in OTI number units.
 * For MPI + GPU, branch on ``MPIX_Query_cuda_support()`` with a host-staging
   fallback.
 * Build with ``nvcc_wrapper`` as the compiler and let ``FindMPI`` supply MPI

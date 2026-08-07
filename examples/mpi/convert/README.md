@@ -28,10 +28,10 @@ datatype, and the result readout differ.
 
 ## Movement needs only the datatype
 
-`Bcast`, `Scatterv`, and `Gatherv` only *move* jets; they never combine them. So
+`Bcast`, `Scatterv`, and `Gatherv` only *move* OTI numbers; they never combine them. So
 one committed datatype (`oti::mpi::make_datatype<Scalar>()`) serves all three —
 **no custom `MPI_Op`**. Here the per-element computation is unchanged, so moving
-the finished jets introduces no rounding and the gathered field is
+the finished OTI numbers introduces no rounding and the gathered field is
 **bit-identical** to the serial run at the tested rank counts. (Combining
 collectives — `Reduce`/`Allreduce` — are the other family and need the operator
 from the `mpi_oti_reduce` example.)

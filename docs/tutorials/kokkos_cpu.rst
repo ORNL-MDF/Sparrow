@@ -147,7 +147,7 @@ Writing Your Own Kernel
 -----------------------
 
 The smoke test proves the backend works; this section shows what using it
-looks like. The program below fills a device array with the jets of
+looks like. The program below fills a device array with the OTI numbers of
 ``f(x) = exp(sin(x))`` over a small grid — one grid point per thread — then
 copies them back and reads the derivatives on the host.
 
@@ -176,7 +176,7 @@ Create a project directory with the two files side by side:
        using T = oti::otinum<1, 2>;
        int const n = 8;
 
-       // A device array of jets, one per grid point.
+       // A device array of OTI numbers, one per grid point.
        Kokkos::View<T*> ys("ys", n);
 
        // Evaluate f and its first two derivatives in parallel.
@@ -185,7 +185,7 @@ Create a project directory with the two files side by side:
            ys(i) = oti::exp(oti::sin(x));
        });
 
-       // Copy the jets back and read the derivatives on the host.
+       // Copy the OTI numbers back and read the derivatives on the host.
        auto host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace{}, ys);
        for (int i = 0; i < n; ++i) {
            std::cout << "x=" << 0.1 * i
@@ -208,13 +208,13 @@ gets both the definition and the Kokkos dependency automatically):
 
    find_package(Kokkos REQUIRED)
 
-   add_executable(jet_grid main.cpp)
-   target_include_directories(jet_grid PRIVATE /path/to/sparrow/include)
-   target_compile_definitions(jet_grid PRIVATE OTI_ENABLE_KOKKOS)
-   target_link_libraries(jet_grid PRIVATE Kokkos::kokkos)
+   add_executable(oti_number_grid main.cpp)
+   target_include_directories(oti_number_grid PRIVATE /path/to/sparrow/include)
+   target_compile_definitions(oti_number_grid PRIVATE OTI_ENABLE_KOKKOS)
+   target_link_libraries(oti_number_grid PRIVATE Kokkos::kokkos)
 
 From inside the ``oti_kokkos_demo`` directory, configure with the same
-compiler and Kokkos prefix as before, build, and run. ``jet_grid`` is the
+compiler and Kokkos prefix as before, build, and run. ``oti_number_grid`` is the
 executable name from ``add_executable`` above:
 
 .. code-block:: console
@@ -227,7 +227,7 @@ executable name from ``add_executable`` above:
      -DCMAKE_CXX_COMPILER=g++ \
      -DCMAKE_PREFIX_PATH=/tmp/kokkos-install-openmp
    cmake --build build
-   ./build/jet_grid
+   ./build/oti_number_grid
 
 Expected output (the first row is easy to check by hand: at ``x = 0``,
 ``f``, ``f'``, and ``f''`` of ``exp(sin(x))`` are all exactly ``1``):
@@ -282,8 +282,8 @@ definition, and a transitive ``Kokkos::kokkos`` link, and the generated
 
    find_package(otinum CONFIG REQUIRED)
 
-   add_executable(jet_grid main.cpp)
-   target_link_libraries(jet_grid PRIVATE oti::otinum)
+   add_executable(oti_number_grid main.cpp)
+   target_link_libraries(oti_number_grid PRIVATE oti::otinum)
 
 Because the consumer must locate both the otinum package and the Kokkos
 package that otinum depends on, give ``CMAKE_PREFIX_PATH`` *both* install
@@ -295,7 +295,7 @@ prefixes, separated by a semicolon. From the consumer project directory:
      -DCMAKE_CXX_COMPILER=g++ \
      -DCMAKE_PREFIX_PATH="/tmp/otinum-install-kokkos;/tmp/kokkos-install-openmp"
    cmake --build build
-   ./build/jet_grid
+   ./build/oti_number_grid
 
 The output is identical to the direct-include build above. As everywhere on
 this page, use the same compiler that built Kokkos in place of ``g++`` if your

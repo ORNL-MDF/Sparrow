@@ -17,15 +17,15 @@ Each rank owns a set of mesh nodes and, for every edge that crosses a partition
 boundary, keeps a **ghost** copy of the remote endpoint. Before each local update
 reads its neighbours, the ranks exchange boundary values to refresh those ghosts
 -- the same idea as the structured halo, but the exchanged set is irregular. With
-OTI, each node is a complete jet, so the communication pattern is unchanged: MPI
+OTI, each node is a complete OTI number, so the communication pattern is unchanged: MPI
 moves the value and all derivative coefficients together as one ``MPI_OTINUM``.
 
 .. figure:: ../../../_static/diagrams/mpi_unstructured.png
-   :alt: Bidirectional irregular exchange between two ranks; each node is a full OTI jet tower moved whole by MPI_Type_indexed
+   :alt: Bidirectional irregular exchange between two ranks; each node is a full OTI number tower moved whole by MPI_Type_indexed
    :width: 100%
 
    The irregular exchange between two ranks (a small illustrative slice; the
-   example has 240 nodes). Every node is a complete :math:`\mathrm{OTI}_M^N` jet,
+   example has 240 nodes). Every node is a complete :math:`\mathrm{OTI}_M^N` OTI number,
    drawn as a tower of coefficient planes (value, first-order directions
    :math:`c_{e_0},\ldots`, up to order :math:`N`), and the **whole** tower travels
    as one ``MPI_OTINUM`` -- one node labelled in full at the left. The swap is
@@ -72,22 +72,22 @@ element:
    -using Scalar = double;
    +#include "otinum/otinum.hpp"                       // 1. otinum core
    +#include "otinum/mpi.hpp"                           //    MPI datatype helper
-   +using Jet = oti::otinum<2, 1, double>;              // 2. value + 2 sensitivities
+   +using OTINumber = oti::otinum<2, 1, double>;              // 2. value + 2 sensitivities
 
     // source boundary values
    -const Scalar T_A = 1.0;
    -const Scalar T_B = 1.0;
-   +const Jet T_A = Jet::variable(0, 1.0);              // 3. seed A = 1 + e_0
-   +const Jet T_B = Jet::variable(1, 1.0);             //    seed B = 1 + e_1
+   +const OTINumber T_A = OTINumber::variable(0, 1.0);              // 3. seed A = 1 + e_0
+   +const OTINumber T_B = OTINumber::variable(1, 1.0);             //    seed B = 1 + e_1
 
     // ... the Jacobi relaxation and the per-neighbour Sendrecv keep their shape ...
 
-    // 4. build the indexed send type on the jet element instead of MPI_DOUBLE
+    // 4. build the indexed send type on the OTI number element instead of MPI_DOUBLE
    -MPI_Type_indexed(k, blocklen, displ, MPI_DOUBLE,  &nb.send_type);
-   +MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<Jet>();   // one committed jet
+   +MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<OTINumber>();   // one committed OTI number
    +MPI_Type_indexed(k, blocklen, displ, MPI_OTINUM, &nb.send_type);
 
-   +// 5. read the sensitivities out of the converged jet
+   +// 5. read the sensitivities out of the converged OTI number
    +const double dudA = s.coeff(oti::sparse({{0, 1}}));   // du/dA
    +const double dudB = s.coeff(oti::sparse({{1, 1}}));   // du/dB
 
@@ -103,12 +103,12 @@ parameters with respect to which derivatives are requested:
 
 .. code-block:: cpp
 
-   using Jet = oti::otinum<2, 1, double>;          // value + d/dA + d/dB
+   using OTINumber = oti::otinum<2, 1, double>;          // value + d/dA + d/dB
 
-   const Jet T_A = Jet::variable(0, 1.0);          // 1.0 + e_0
-   const Jet T_B = Jet::variable(1, 1.0);          // 1.0 + e_1
+   const OTINumber T_A = OTINumber::variable(0, 1.0);          // 1.0 + e_0
+   const OTINumber T_B = OTINumber::variable(1, 1.0);          // 1.0 + e_1
 
-Every node then converges to a jet whose coefficients are the value *and* its
+Every node then converges to an OTI number whose coefficients are the value *and* its
 derivative with respect to each source -- the parameter sensitivity of the entire
 field, from one solve. The relaxation code is unchanged; the overloaded arithmetic
 propagates the derivatives automatically.
@@ -143,15 +143,15 @@ matching ghost block:
 
    std::vector<int> displ;                     // local slots, sorted by gid
    for (int gid : needed) displ.push_back(g2l[gid]);
-   std::vector<int> blocklen(displ.size(), 1); // one jet per displacement
+   std::vector<int> blocklen(displ.size(), 1); // one OTI number per displacement
 
    MPI_Type_indexed(displ.size(), blocklen.data(), displ.data(),
                     MPI_OTINUM, &nb.send_type);
    MPI_Type_commit(&nb.send_type);
 
-The displacements are in **units of jets**, not bytes: MPI knows the extent of one
-``MPI_OTINUM`` is exactly ``sizeof(Jet)`` (the jet is padding-free, see
-:doc:`../index`), so the scattered gather lands on jet boundaries with no
+The displacements are in **units of OTI numbers**, not bytes: MPI knows the extent of one
+``MPI_OTINUM`` is exactly ``sizeof(OTINumber)`` (the OTI number is padding-free, see
+:doc:`../index`), so the scattered gather lands on OTI number boundaries with no
 byte arithmetic. Because every block here is length 1,
 ``MPI_Type_create_indexed_block`` is an equivalent shorthand;
 ``MPI_Type_indexed`` generalizes to variable-length blocks when a node carries
@@ -172,7 +172,7 @@ indexed type, the neighbour's nodes come into the contiguous ghost block:
                     nb.rank, 7, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
 The send count is ``1`` element of the indexed type (which itself spans the
-scattered slots); the receive is ``recv_count`` plain jets. ``MPI_Sendrecv``
+scattered slots); the receive is ``recv_count`` plain OTI numbers. ``MPI_Sendrecv``
 avoids deadlock without manual ordering.
 
 Verify Without A Gather
@@ -218,7 +218,7 @@ Build And Run
    graph              : 240 nodes, ring + 240 chords (small-world)
    partition          : 4 ranks, contiguous blocks
    iterations         : 2000 Jacobi sweeps
-   verify vs serial   : PASS (bit-exact) (0 mismatching jets)
+   verify vs serial   : PASS (bit-exact) (0 mismatching OTI numbers)
    finite difference  : centred, h = 1.0e-06
      d/dA             : OTI = 0.4588512595, FD = 0.4588512594, |error| = 2.875e-11
      d/dB             : OTI = 0.5411389312, FD = 0.5411389314, |error| = 1.452e-10
@@ -234,4 +234,4 @@ comparison, so it is CI-gateable.
 The sample output doubles as a correctness check on the *derivatives*: the problem
 is linear and both sources are at 1.0, so each node's value equals the sum of its
 two sensitivities -- ``0.45885126 + 0.54113893 = 0.99999019`` -- which is exactly
-what the jet reports.
+what the OTI number reports.

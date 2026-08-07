@@ -5,7 +5,7 @@ Shows what the program actually does: the global domain of
 f(x, y) = sin(x)*exp(y) is split into contiguous blocks, one per MPI rank; each
 rank evaluates the function on *its* block alone (no communication); then one
 MPI_Gatherv assembles every block on rank 0. A callout shows that each grid point
-is not a scalar but a jet -- the value plus its derivative coefficients -- which
+is not a scalar but an OTI number -- the value plus its derivative coefficients -- which
 is the single element the committed MPI datatype moves.
 
 Usage: plot_diagram.py [out.png]
@@ -86,10 +86,10 @@ def main(out_path="mpi_gather.png"):
     fig.add_artist(arrow)
     fig.text(0.495, 0.64, "MPI_Gatherv", ha="center", va="bottom", fontsize=11,
              fontweight="bold")
-    fig.text(0.495, 0.56, "counts in\njets, not bytes", ha="center", va="top",
+    fig.text(0.495, 0.56, "counts in\nOTI numbers, not bytes", ha="center", va="top",
              fontsize=8.5, style="italic", color="#444444")
 
-    # ---- bottom callout: one grid point is a jet ---------------------------
+    # ---- bottom callout: one grid point is an OTI number ---------------------------
     fig.text(0.07, 0.155, "2.  Evaluate locally", fontsize=12,
              fontweight="bold", ha="left", va="center")
     fig.text(0.07, 0.082, r"each rank evaluates $f(x,y)=\sin x\;e^{y}$ on its "
@@ -100,7 +100,7 @@ def main(out_path="mpi_gather.png"):
                          boxstyle="round,pad=0.012", fc="#fdf6e3", ec="#333333",
                          lw=1.4, zorder=5)
     fig.add_artist(box)
-    fig.text(0.52, 0.155, "what moves: one grid point is a jet, not a scalar",
+    fig.text(0.52, 0.155, "what moves: one grid point is an OTI number, not a scalar",
              fontsize=10, fontweight="bold", ha="left", va="center", zorder=6)
     fig.text(0.52, 0.085,
              r"$[\;f,\;\; \partial_x f,\;\; \partial_y f,\;\; "

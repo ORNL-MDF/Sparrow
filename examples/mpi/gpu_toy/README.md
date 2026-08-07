@@ -1,9 +1,9 @@
-# mpi_oti_gpu_toy — OTI jets on the GPU under MPI
+# mpi_oti_gpu_toy — OTI numbers on the GPU under MPI
 
 The GPU counterpart of `../toy`. Two programs, both evaluating
-`f(x,y)=sin(x)·exp(y)` over a 1000×1000 grid of `otinum<2,2,double>` jets **on the
+`f(x,y)=sin(x)·exp(y)` over a 1000×1000 grid of `otinum<2,2,double>` OTI numbers **on the
 device** (Kokkos + CUDA) and combining the results over MPI with the same
-`oti::mpi::make_datatype<Jet>()` datatype.
+`oti::mpi::make_datatype<OTINumber>()` datatype.
 
 ## `mpi_oti_multigpu` — the one-rank-per-GPU pattern (tutorial: *Multi-GPU Execution*)
 
@@ -23,11 +23,11 @@ mpirun -np 4 ./build/mpi_oti_multigpu
 
 ## `mpi_oti_gpu_toy` — the transport reference (device-pointer vs host staging)
 
-Demonstrates how device-resident jets reach MPI:
+Demonstrates how device-resident OTI numbers reach MPI:
 
 - **The datatype is GPU-agnostic.** `otinum`'s layout (`sizeof`, alignment, member
   order) is identical in host and device memory — the program checks this directly
-  (a device kernel reports `sizeof(Jet)`, compared to the host value). So
+  (a device kernel reports `sizeof(OTINumber)`, compared to the host value). So
   `MPI_Type_contiguous(ncoeffs, MPI_DOUBLE)` describes a device buffer unchanged.
 - **Dual-path transport, chosen at runtime.** It queries
   `MPIX_Query_cuda_support()` (override with `OTI_MPI_DEVICE=1/0`): if the MPI is

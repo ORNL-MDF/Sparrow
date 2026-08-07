@@ -11,7 +11,7 @@
 // d(temperature)/d(West) and d(temperature)/d(South) for free -- the parameter
 // sensitivity of the whole field, from one solve.
 //
-// The MPI-specific surface is two derived datatypes built on the committed jet:
+// The MPI-specific surface is two derived datatypes built on the committed OTI number:
 //   * row halos (N/S neighbours) are CONTIGUOUS  -> count of MPI_OTINUM
 //   * column halos (E/W neighbours) are STRIDED   -> MPI_Type_vector(MPI_OTINUM)
 // If the strided column type were wrong, the columns would corrupt and the
@@ -37,7 +37,7 @@
 
 // ---- problem definition ----------------------------------------------------
 
-using Jet = oti::otinum<2, 1, double>;   // value + d/dT_west + d/dT_south
+using OTINumber = oti::otinum<2, 1, double>;   // value + d/dT_west + d/dT_south
 static constexpr int N     = 128;        // interior is N x N (boundary excluded)
 static constexpr int ITERS = 4000;       // fixed count -> identical serial work
 static constexpr double FD_H   = 1.0e-6;
@@ -45,14 +45,14 @@ static constexpr double FD_TOL = 1.0e-8;
 
 // The two hot walls, seeded as infinitesimals so the solution carries its
 // sensitivity to each wall temperature. The other two walls are cold.
-static const Jet T_WEST  = Jet::variable(0, 1.0);   // 1.0 + e_0
-static const Jet T_SOUTH = Jet::variable(1, 1.0);   // 1.0 + e_1
-static const Jet T_COLD  = Jet(0.0);
+static const OTINumber T_WEST  = OTINumber::variable(0, 1.0);   // 1.0 + e_0
+static const OTINumber T_SOUTH = OTINumber::variable(1, 1.0);   // 1.0 + e_1
+static const OTINumber T_COLD  = OTINumber(0.0);
 
 // One Jacobi sweep over the interior [1..nx] x [1..ny] of a ghosted field whose
 // row stride is `stride`. Written once and used by BOTH the serial reference and
 // the distributed solver, so the floating-point arithmetic is bit-identical.
-static inline void jacobi_sweep(const Jet* cur, Jet* next,
+static inline void jacobi_sweep(const OTINumber* cur, OTINumber* next,
                                 int nx, int ny, int stride)
 {
     for (int i = 1; i <= nx; ++i) {
@@ -68,11 +68,11 @@ static inline void jacobi_sweep(const Jet* cur, Jet* next,
 // Every rank runs this redundantly on the whole domain and compares its own tile
 // against the matching subblock -- so verification needs no gather, only the
 // halo exchange is real communication.
-static std::vector<Jet> solve_serial()
+static std::vector<OTINumber> solve_serial()
 {
     const int s = N + 2;                       // stride incl. both boundaries
-    std::vector<Jet> a(static_cast<size_t>(s) * s, T_COLD);
-    std::vector<Jet> b = a;
+    std::vector<OTINumber> a(static_cast<size_t>(s) * s, T_COLD);
+    std::vector<OTINumber> b = a;
 
     // Dirichlet boundaries: West = column 0, South = row 0 (hot); East/North cold.
     for (int k = 0; k < s; ++k) {
@@ -82,8 +82,8 @@ static std::vector<Jet> solve_serial()
         b[static_cast<size_t>(0) * s + k] = T_WEST;
     }
 
-    Jet* cur = a.data();
-    Jet* next = b.data();
+    OTINumber* cur = a.data();
+    OTINumber* next = b.data();
     for (int it = 0; it < ITERS; ++it) {
         jacobi_sweep(cur, next, N, N, s);
         std::swap(cur, next);
@@ -177,13 +177,13 @@ int main(int argc, char** argv)
 
     const int stride = ny + 2;                         // local row length w/ ghosts
     const size_t local_n = static_cast<size_t>(nx + 2) * stride;
-    std::vector<Jet> a(local_n, T_COLD);
-    std::vector<Jet> b = a;
+    std::vector<OTINumber> a(local_n, T_COLD);
+    std::vector<OTINumber> b = a;
 
     // Fill ghost layers that coincide with the global Dirichlet boundary. Interior
     // ghosts get overwritten by the halo exchange each iteration; these edge
     // ghosts are set once and never touched, so the BC is held automatically.
-    auto set_boundary = [&](std::vector<Jet>& f) {
+    auto set_boundary = [&](std::vector<OTINumber>& f) {
         if (coords[0] == 0)            // West wall -> top ghost row i=0
             for (int j = 0; j < stride; ++j) f[static_cast<size_t>(0) * stride + j] = T_WEST;
         if (coords[0] == dims[0] - 1)  // East wall -> bottom ghost row i=nx+1
@@ -197,9 +197,9 @@ int main(int argc, char** argv)
     set_boundary(b);
 
     // ---- 3. commit the datatypes -------------------------------------------
-    // Base element: one jet == ncoeffs contiguous doubles (static_asserts packed).
-    MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<Jet>();
-    // Column halo (E/W): nx jets, one per row, strided by `stride` jets.
+    // Base element: one OTI number == ncoeffs contiguous doubles (static_asserts packed).
+    MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<OTINumber>();
+    // Column halo (E/W): nx OTI numbers, one per row, strided by `stride` OTI numbers.
     MPI_Datatype MPI_COL;
     MPI_Type_vector(nx, 1, stride, MPI_OTINUM, &MPI_COL);
     MPI_Type_commit(&MPI_COL);
@@ -208,8 +208,8 @@ int main(int argc, char** argv)
     auto idx = [&](int i, int j) { return static_cast<size_t>(i) * stride + j; };
 
     // ---- 4. Jacobi iteration with halo exchange ----------------------------
-    Jet* cur = a.data();
-    Jet* next = b.data();
+    OTINumber* cur = a.data();
+    OTINumber* next = b.data();
     for (int it = 0; it < ITERS; ++it) {
         // Rows (contiguous, count = ny). Send my edge interior row, receive the
         // neighbour's into my ghost row. Sendrecv with MPI_PROC_NULL is a no-op,
@@ -234,23 +234,23 @@ int main(int argc, char** argv)
     }
 
     // ---- 5. verify this tile against the serial reference (bit-exact) -------
-    const std::vector<Jet> ref = solve_serial();
+    const std::vector<OTINumber> ref = solve_serial();
     const int sref = N + 2;
     long local_mismatch = 0;
     for (int i = 1; i <= nx; ++i) {
         for (int j = 1; j <= ny; ++j) {
-            const Jet& got = cur[idx(i, j)];
-            const Jet& exp = ref[static_cast<size_t>(gi0 + i - 1) * sref + (gj0 + j - 1)];
-            if (std::memcmp(&got, &exp, sizeof(Jet)) != 0) ++local_mismatch;
+            const OTINumber& got = cur[idx(i, j)];
+            const OTINumber& exp = ref[static_cast<size_t>(gi0 + i - 1) * sref + (gj0 + j - 1)];
+            if (std::memcmp(&got, &exp, sizeof(OTINumber)) != 0) ++local_mismatch;
         }
     }
     long total_mismatch = 0;
     MPI_Reduce(&local_mismatch, &total_mismatch, 1, MPI_LONG, MPI_SUM, 0, cart);
 
-    // The rank owning the global centre cell prints a sample jet.
+    // The rank owning the global centre cell prints a sample OTI number.
     const int ci = N / 2, cj = N / 2;   // 1-based global interior centre
     if (gi0 <= ci && ci < gi0 + nx && gj0 <= cj && cj < gj0 + ny) {
-        const Jet& s = cur[idx(ci - gi0 + 1, cj - gj0 + 1)];
+        const OTINumber& s = cur[idx(ci - gi0 + 1, cj - gj0 + 1)];
         std::printf("sample @ global centre (%d,%d), owned by cart rank %d (%d,%d):\n",
                     ci, cj, rank, coords[0], coords[1]);
         std::printf("  temperature        = % .8f\n", s.coeff(oti::sparse({})));
@@ -262,7 +262,7 @@ int main(int argc, char** argv)
 
     int fd_pass = 1;
     if (rank == 0) {
-        const Jet& centre = ref[static_cast<size_t>(ci) * sref + cj];
+        const OTINumber& centre = ref[static_cast<size_t>(ci) * sref + cj];
         const double oti_west = centre.coeff(oti::sparse({{0, 1}}));
         const double oti_south = centre.coeff(oti::sparse({{1, 1}}));
         const std::vector<double> west_plus =
@@ -299,7 +299,7 @@ int main(int argc, char** argv)
 
         for (int i = 1; i <= N; ++i) {
             for (int j = 1; j <= N; ++j) {
-                const Jet& cell = ref[static_cast<size_t>(i) * sref + j];
+                const OTINumber& cell = ref[static_cast<size_t>(i) * sref + j];
                 const double ew = std::abs(
                     cell.coeff(oti::sparse({{0, 1}})) -
                     fd_value(west_plus, west_minus, i, j));
@@ -320,7 +320,7 @@ int main(int argc, char** argv)
         std::printf("---\n");
         std::printf("process grid       : %d x %d  (%d ranks)\n", dims[0], dims[1], world_size);
         std::printf("interior grid      : %d x %d  (%d Jacobi iterations)\n", N, N, ITERS);
-        std::printf("verify vs serial   : %s (%ld mismatching jets)\n",
+        std::printf("verify vs serial   : %s (%ld mismatching OTI numbers)\n",
                     total_mismatch == 0 ? "PASS (bit-exact)" : "FAIL", total_mismatch);
         std::printf("finite difference  : centred, h = %.1e\n", FD_H);
         std::printf("  d/dT_west        : OTI = %.10f, FD = %.10f, |error| = %.3e\n",

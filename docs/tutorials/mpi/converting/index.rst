@@ -29,13 +29,13 @@ derivatives through unmodified code.
    -    Scalar x = x0;
    +    Scalar x = Scalar::variable(0, x0);     // x0 + unit perturbation in direction 0
 
-    // 4. describe the jet to MPI: ONE committed datatype, the base for EVERY op
-   -    MPI_Datatype JET = MPI_DOUBLE;
-   +    MPI_Datatype JET = oti::mpi::make_datatype<Scalar>();
-        //   movement (scatter / gather / bcast) : pass JET directly, counts in jets
-        //   structured / unstructured halos     : MPI_Type_vector / _indexed over JET
-        //   reductions (reduce / allreduce)     : pair JET with a custom MPI_Op
-   +    oti::mpi::free_datatype(JET);
+    // 4. describe the OTI number to MPI: ONE committed datatype, the base for EVERY op
+   -    MPI_Datatype OTI_NUMBER = MPI_DOUBLE;
+   +    MPI_Datatype OTI_NUMBER = oti::mpi::make_datatype<Scalar>();
+        //   movement (scatter / gather / bcast) : pass OTI_NUMBER directly, counts in OTI numbers
+        //   structured / unstructured halos     : MPI_Type_vector / _indexed over OTI_NUMBER
+        //   reductions (reduce / allreduce)     : pair OTI_NUMBER with a custom MPI_Op
+   +    oti::mpi::free_datatype(OTI_NUMBER);
 
     // 0. THE KERNEL AND THE COMMUNICATION STRUCTURE ARE UNCHANGED
     //    overloaded operators + <cmath> propagate the derivatives automatically
@@ -56,12 +56,12 @@ What each edit is for:
    ``Scalar::variable(d, x0)`` is ``x0`` carrying a unit infinitesimal in
    direction ``d``.
 #. **Describe the element to MPI.** ``oti::mpi::make_datatype<Scalar>()`` commits
-   one contiguous datatype for the jet and replaces ``MPI_DOUBLE`` everywhere;
-   counts are then in *jets*, not bytes. This one committed type is the base for
+   one contiguous datatype for the OTI number and replaces ``MPI_DOUBLE`` everywhere;
+   counts are then in *OTI numbers*, not bytes. This one committed type is the base for
    **every** MPI operation -- passed directly to movement collectives, wrapped in a
    derived datatype (``MPI_Type_vector`` / ``MPI_Type_indexed``) for halos, or
    paired with a custom ``MPI_Op`` for reductions -- and it is freed at the end.
-#. **Read the derivatives out.** The result is now a jet; pull a coefficient with
+#. **Read the derivatives out.** The result is now an OTI number; pull a coefficient with
    ``coeff(oti::sparse(...))`` (or feed it straight into more OTI arithmetic).
 
 That is the entire OTI surface. Note what is **absent**: the kernel, the domain
@@ -75,7 +75,7 @@ decomposition, and the collective calls keep their exact shape.
    :doc:`device`, then shows the same edits carrying over unchanged when the
    buffers live in GPU memory. In an application already configured
    for Kokkos, the one extra **OTI-specific** setting is ``OTI_ENABLE_KOKKOS``,
-   which makes a jet callable inside a device kernel (it switches the coefficient
+   which makes an OTI number callable inside a device kernel (it switches the coefficient
    container from ``std::array`` to ``Kokkos::Array`` but does not change the
    layout, so ``oti::mpi::make_datatype`` is unaffected). The Kokkos backend,
    compiler wrapper, GPU architecture, and MPI transport setup are covered in
@@ -83,7 +83,7 @@ decomposition, and the collective calls keep their exact shape.
 
 Edit 4 above is the **only** edit that varies between programs, and it varies in a
 small, bounded way: each communication pattern adds exactly **one** piece of MPI
-built on the committed jet datatype ``JET``. The patterns are ordered by how much
+built on the committed OTI number datatype ``OTI_NUMBER``. The patterns are ordered by how much
 the ranks must communicate -- the real axis of difficulty -- and end with the
 orthogonal case of buffers that live in GPU memory:
 
@@ -92,55 +92,55 @@ orthogonal case of buffers that live in GPU memory:
    :widths: 26 40 34
 
    * - Rung
-     - New MPI surface (on top of the jet datatype)
+     - New MPI surface (on top of the OTI number datatype)
      - Full example
    * - **Independent evaluation**
-     - just the datatype -- ``Scatterv`` / ``Bcast`` / ``Gatherv`` move jets
+     - just the datatype -- ``Scatterv`` / ``Bcast`` / ``Gatherv`` move OTI numbers
        directly (no custom op)
      - :doc:`gather`
    * - **Global reduction**
-     - a custom ``MPI_Op`` (``oti::mpi::make_sum_op``) to fold jets in
+     - a custom ``MPI_Op`` (``oti::mpi::make_sum_op``) to fold OTI numbers in
        ``Reduce`` / ``Allreduce``
      - :doc:`reduce`
    * - **Halo exchange**
-     - ``MPI_Type_vector`` over the jet for strided structured halos; first solver
+     - ``MPI_Type_vector`` over the OTI number for strided structured halos; first solver
        that communicates every iteration
      - :doc:`halo`
    * - **Unstructured meshes**
-     - ``MPI_Type_indexed`` over the jet for arbitrary, scattered ghost-node lists
+     - ``MPI_Type_indexed`` over the OTI number for arbitrary, scattered ghost-node lists
      - :doc:`unstructured`
    * - **Device buffers**
-     - same datatype and custom ops when jet buffers live in GPU memory
+     - same datatype and custom ops when OTI number buffers live in GPU memory
      - :doc:`device`
 
 The rule of thumb: **movement** collectives (scatter / gather / broadcast /
 allgather) need *only* the datatype; **combining** collectives (reduce) also need a
 custom operator; **communicating solvers** also wrap a derived datatype around the
-jet. Each pattern's exact addition is below; the linked example is the full
+OTI number. Each pattern's exact addition is below; the linked example is the full
 before/after walkthrough.
 
 **Independent evaluation -- movement only.** Scatter the field, transform each
-block locally, gather the results. Movement collectives move jets directly under
+block locally, gather the results. Movement collectives move OTI numbers directly under
 the committed datatype -- **no custom operator** -- so the result is bit-exact and
 identical at any rank count:
 
 .. code-block:: diff
 
-   -    MPI_Datatype JET = MPI_DOUBLE;
-   +    MPI_Datatype JET = oti::mpi::make_datatype<Scalar>();   // the only new type
+   -    MPI_Datatype OTI_NUMBER = MPI_DOUBLE;
+   +    MPI_Datatype OTI_NUMBER = oti::mpi::make_datatype<Scalar>();   // the only new type
 
-        // movement collectives are unchanged -- they just carry JET
-        MPI_Bcast(&param, 1, JET, 0, comm);
-        MPI_Scatterv(in.data(),  counts, displs, JET,
-                     local.data(), my_n,         JET, 0, comm);
-        MPI_Gatherv (local.data(), my_n,         JET,
-                     out.data(), counts, displs, JET, 0, comm);
-   +    oti::mpi::free_datatype(JET);
+        // movement collectives are unchanged -- they just carry OTI_NUMBER
+        MPI_Bcast(&param, 1, OTI_NUMBER, 0, comm);
+        MPI_Scatterv(in.data(),  counts, displs, OTI_NUMBER,
+                     local.data(), my_n,         OTI_NUMBER, 0, comm);
+        MPI_Gatherv (local.data(), my_n,         OTI_NUMBER,
+                     out.data(), counts, displs, OTI_NUMBER, 0, comm);
+   +    oti::mpi::free_datatype(OTI_NUMBER);
 
 Full walkthrough: :doc:`gather`.
 
 **Global reduction -- a custom operator.** Combining collectives must know how to
-*fold* two jets, which MPI cannot infer, so they take a user ``MPI_Op``. The header
+*fold* two OTI numbers, which MPI cannot infer, so they take a user ``MPI_Op``. The header
 ships ``make_sum_op`` / ``make_prod_op`` / ``make_maxloc_op`` / ``make_minloc_op``
 (or pass your own combine). Every coefficient in the chosen OTI shape reduces in
 the same collective as the real value:
@@ -148,25 +148,25 @@ the same collective as the real value:
 .. code-block:: diff
 
    -    MPI_Allreduce(local.data(), global.data(), n, MPI_DOUBLE, MPI_SUM, comm);
-   +    MPI_Op SUM = oti::mpi::make_sum_op<Scalar>();   // fold jets coefficient-wise
-   +    MPI_Allreduce(local.data(), global.data(), n, JET, SUM, comm);
+   +    MPI_Op SUM = oti::mpi::make_sum_op<Scalar>();   // fold OTI numbers coefficient-wise
+   +    MPI_Allreduce(local.data(), global.data(), n, OTI_NUMBER, SUM, comm);
    +    oti::mpi::free_op(SUM);
 
 Full walkthrough: :doc:`reduce`.
 
 **Halo exchange -- a strided derived datatype.** A structured stencil exchanges
 edge layers every iteration. Contiguous edges (a row) ship as a plain ``count`` of
-``JET``; strided edges (a column) need one ``MPI_Type_vector`` *over* the jet -- a
-derived datatype on a derived datatype, in units of jets:
+``OTI_NUMBER``; strided edges (a column) need one ``MPI_Type_vector`` *over* the OTI number -- a
+derived datatype on a derived datatype, in units of OTI numbers:
 
 .. code-block:: diff
 
         MPI_Datatype COL;
    -    MPI_Type_vector(nx, 1, stride, MPI_DOUBLE, &COL);   // a column of doubles
-   +    MPI_Type_vector(nx, 1, stride, JET,        &COL);   // a column of jets
+   +    MPI_Type_vector(nx, 1, stride, OTI_NUMBER,        &COL);   // a column of OTI numbers
         MPI_Type_commit(&COL);
 
-        // a row is contiguous (count = ny of JET); a column uses COL
+        // a row is contiguous (count = ny of OTI_NUMBER); a column uses COL
         MPI_Sendrecv(&u[col_send], 1, COL, left,  0,
                      &u[col_recv], 1, COL, right, 0, comm, MPI_STATUS_IGNORE);
         MPI_Type_free(&COL);
@@ -176,7 +176,7 @@ Full walkthrough: :doc:`halo`.
 **Unstructured meshes -- an indexed derived datatype.** An unstructured mesh has no
 grid regularity: the nodes a neighbour needs are an arbitrary, scattered subset of
 this rank's owned nodes. ``MPI_Type_indexed`` describes that subset by its
-displacements (in jets) and gathers it in place, with no manual packing; the
+displacements (in OTI numbers) and gathers it in place, with no manual packing; the
 receiver lands it in a contiguous ghost block:
 
 .. code-block:: diff
@@ -185,18 +185,18 @@ receiver lands it in a contiguous ghost block:
         std::vector<int> blocklen(displ.size(), 1);
         MPI_Datatype SEND;
    -    MPI_Type_indexed(displ.size(), blocklen.data(), displ.data(), MPI_DOUBLE, &SEND);
-   +    MPI_Type_indexed(displ.size(), blocklen.data(), displ.data(), JET,        &SEND);
+   +    MPI_Type_indexed(displ.size(), blocklen.data(), displ.data(), OTI_NUMBER,        &SEND);
         MPI_Type_commit(&SEND);
 
         MPI_Sendrecv(buf, 1, SEND, nbr, 0,                        // scattered send
-                     &buf[ghost_start], ghost_count, JET, nbr, 0, // contiguous recv
+                     &buf[ghost_start], ghost_count, OTI_NUMBER, nbr, 0, // contiguous recv
                      comm, MPI_STATUS_IGNORE);
         MPI_Type_free(&SEND);
 
 Full walkthrough: :doc:`unstructured`.
 
 **Device buffers -- same MPI surface, different memory space.** A Kokkos/MPI code
-can keep jets in device memory and still use the same committed datatype,
+can keep OTI numbers in device memory and still use the same committed datatype,
 counts, displacements, and custom reduction ops. The portable baseline stages
 through host mirrors; a CUDA-aware MPI can take the device pointers directly for
 movement collectives, while custom ``MPI_Op`` reductions remain host-callback
@@ -204,7 +204,7 @@ operations.
 
 Full walkthrough: :doc:`device`.
 
-Everything else is shared: the committed jet datatype from :doc:`../index` is the
+Everything else is shared: the committed OTI number datatype from :doc:`../index` is the
 common building block under all of these.
 
 Examples
@@ -228,7 +228,7 @@ Their sources live under ``examples/mpi/``:
 * ``examples/mpi/unstructured/`` -- irregular ghost lists using
   ``MPI_Type_indexed``.
 * ``examples/mpi/device/`` -- host-staged and CUDA-aware MPI transports for
-  device-resident jet buffers.
+  device-resident OTI number buffers.
 * ``examples/mpi/toy/`` -- datatype, accuracy, and scaling verification.
 
 The older optional GPU toy sources in ``examples/mpi/gpu_toy/`` are covered by

@@ -47,7 +47,7 @@ int main()
         // d/dy z = -2, so the chain rule scales the first partial by -2
         expect_near(ash.partial({0, 1}), -2.0 / std::sqrt(1.0 + x0 * x0));
         expect_all_near(oti::asinh(sh), z, 1e-10);
-        // Log identity: asinh(x) = log(x + sqrt(x^2 + 1)), jet-wide
+        // Log identity: asinh(x) = log(x + sqrt(x^2 + 1)), OTI-number-wide
         expect_all_near(ash, oti::log(z + oti::sqrt(z * z + 1.0)), 1e-10);
 
         T ath = oti::atanh(z);

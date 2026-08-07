@@ -1,7 +1,7 @@
 // Rank-scaling benchmark for the embarrassingly-parallel OTI grid evaluation.
 //
 // Each rank evaluates its block of a 1000x1000 grid of f(x,y)=sin(x)*exp(y)
-// (jets carrying derivatives) and we time that compute region -- the
+// (OTI numbers carrying derivatives) and we time that compute region -- the
 // parallelizable work -- across ranks. The one-time gather is communication, not
 // the workload, so it is excluded here and discussed separately in the tutorial.
 //

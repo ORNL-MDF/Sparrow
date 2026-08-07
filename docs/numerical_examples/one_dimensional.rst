@@ -9,7 +9,7 @@ The smallest complete demonstration: a scalar function of one variable,
 
 evaluated with ``otinum<1, 3>`` -- one variable, truncation order three. A
 single overloaded evaluation at each sample point returns four numbers at
-once: ``f(x)``, ``f'(x)``, ``f''(x)``, and ``f'''(x)``, read from the jet's
+once: ``f(x)``, ``f'(x)``, ``f''(x)``, and ``f'''(x)``, read from the OTI number's
 coefficients (the order-``k`` Taylor coefficient times ``k!`` is the ``k``-th
 derivative).
 
@@ -39,7 +39,7 @@ A Local Taylor Model For Free
 
 The same four coefficients are more than point values -- they are a
 third-order Taylor expansion of ``f`` about the evaluation point. Using the
-jet computed at ``x = 0.75`` directly as a polynomial reproduces the function
+OTI number computed at ``x = 0.75`` directly as a polynomial reproduces the function
 in a neighbourhood of the anchor and degrades smoothly away from it:
 
 .. image:: ../_static/numerical_examples/ex1d_taylor.png
@@ -47,7 +47,7 @@ in a neighbourhood of the anchor and degrades smoothly away from it:
    :width: 85%
    :align: center
 
-This "jet as a local surrogate" reading is the seed of the later examples:
+This "OTI number as a local surrogate" reading is the seed of the later examples:
 :doc:`surrogate` applies it to a PDE solution, :doc:`uq_max_temperature`
 integrates it against input distributions, and :doc:`digital_twin` adds a
 certified region of validity around the anchor.

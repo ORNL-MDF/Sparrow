@@ -6,7 +6,7 @@
 // nothing else.
 //
 // Converting it to OTI (see main.cpp and converting/halo.rst) is a handful of
-// changes: swap the scalar type for a jet, seed the two hot-wall temperatures as
+// changes: swap the scalar type for an OTI number, seed the two hot-wall temperatures as
 // variables, build the halo datatypes on MPI_OTINUM instead of MPI_DOUBLE, and
 // read the sensitivities out. The Jacobi stencil and the halo exchange do not
 // change.

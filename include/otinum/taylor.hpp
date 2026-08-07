@@ -154,10 +154,10 @@ template <int M, int N, class Coeff>
 OTI_FUNCTION otinum<M, N, Coeff> apply_scalar(array<Coeff, N + 1> const& t,
                                               otinum<M, N, Coeff> const& value) noexcept
 {
-    // The truncated Taylor jet is valid only where the function is analytic. If
+    // The truncated Taylor OTI number is valid only where the function is analytic. If
     // any scalar coefficient is non-finite, the expansion point is singular: an
     // undefined value (log(-1)), a pole (log(0)), or a vertical tangent (sqrt(0),
-    // cbrt(0)). There is no valid finite jet there, so report the scalar value
+    // cbrt(0)). There is no valid finite OTI number there, so report the scalar value
     // f(x0) and NaN for every derivative -- one consistent signal across all
     // singularities, instead of the mix of inf and nan that arithmetic with
     // infinities would otherwise produce (e.g. the inf * 0 cross terms that turn

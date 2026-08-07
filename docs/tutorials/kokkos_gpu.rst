@@ -185,7 +185,7 @@ OpenMP ones:
      -DCMAKE_CXX_COMPILER=/tmp/kokkos/bin/nvcc_wrapper \
      -DCMAKE_PREFIX_PATH=/tmp/kokkos-install-cuda
    cmake --build build
-   ./build/jet_grid
+   ./build/oti_number_grid
 
 The ``parallel_for`` body now executes on the GPU, and the output is identical
 to the CPU run to the last bit:
@@ -198,7 +198,7 @@ to the CPU run to the last bit:
    ...
 
 That portability is the whole point: ``otinum`` is a trivially copyable value
-type backed by ``Kokkos::Array`` under ``OTI_ENABLE_KOKKOS``, so the same jet
+type backed by ``Kokkos::Array`` under ``OTI_ENABLE_KOKKOS``, so the same OTI number
 arithmetic compiles for host or device depending only on the Kokkos install you
 point CMake at.
 

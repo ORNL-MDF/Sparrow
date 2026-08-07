@@ -16,7 +16,7 @@ find_package(MPI REQUIRED)
 add_executable(mpi_unstructured_before main_before.cpp)
 target_link_libraries(mpi_unstructured_before PRIVATE MPI::MPI_CXX)
 
-# The OTI version (after): jets carry the source sensitivities.
+# The OTI version (after): OTI numbers carry the source sensitivities.
 add_executable(mpi_oti_unstructured main.cpp)
 target_include_directories(mpi_oti_unstructured PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../include)
 target_link_libraries(mpi_oti_unstructured PRIVATE MPI::MPI_CXX)

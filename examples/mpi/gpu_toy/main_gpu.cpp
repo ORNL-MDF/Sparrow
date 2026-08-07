@@ -1,9 +1,9 @@
 // GPU variant of the MPI + OTI toy (step 2): prove the committed MPI datatype
-// works for jets produced on the GPU.
+// works for OTI numbers produced on the GPU.
 //
 // Each rank evaluates f(x,y)=sin(x)*exp(y) over its slice of a 1000x1000 grid on
-// the DEVICE (Kokkos::View<Jet*> in CUDA space), then MPI_Gatherv's every jet to
-// rank 0 using oti::mpi::make_datatype<Jet>().
+// the DEVICE (Kokkos::View<OTI number*> in CUDA space), then MPI_Gatherv's every OTI number to
+// rank 0 using oti::mpi::make_datatype<OTI number>().
 //
 // Two transport paths, chosen at runtime:
 //   * CUDA-aware MPI  -> pass the device pointer straight to MPI (what a real
@@ -36,17 +36,17 @@
 #include "otinum/otinum.hpp"
 #include "otinum/mpi.hpp"
 
-using Jet = oti::otinum<2, 2, double>;   // value + grad + Hessian w.r.t. (x, y)
+using OTINumber = oti::otinum<2, 2, double>;   // value + grad + Hessian w.r.t. (x, y)
 static constexpr int N = 1000;
 static constexpr long TOTAL = static_cast<long>(N) * N;
 
-KOKKOS_INLINE_FUNCTION Jet evaluate(long g)
+KOKKOS_INLINE_FUNCTION OTINumber evaluate(long g)
 {
     const double h = 1.0 / (N - 1);
     const long i = g / N;
     const long j = g % N;
-    Jet x = Jet::variable(0, i * h);
-    Jet y = Jet::variable(1, j * h);
+    OTINumber x = OTINumber::variable(0, i * h);
+    OTINumber y = OTINumber::variable(1, j * h);
     return oti::sin(x) * oti::exp(y);
 }
 
@@ -81,28 +81,28 @@ int main(int argc, char** argv)
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-        MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<Jet>();
+        MPI_Datatype MPI_OTINUM = oti::mpi::make_datatype<OTINumber>();
         const bool cuda_aware = detect_cuda_aware();
 
-        // ---- layout agreement: sizeof(Jet) on device must equal host ----------
+        // ---- layout agreement: sizeof(OTI number) on device must equal host ----------
         Kokkos::View<std::size_t*> d_sz("d_sz", 1);
         Kokkos::parallel_for(
-            "sizeof", 1, KOKKOS_LAMBDA(int) { d_sz(0) = sizeof(Jet); });
+            "sizeof", 1, KOKKOS_LAMBDA(int) { d_sz(0) = sizeof(OTINumber); });
         auto h_sz = Kokkos::create_mirror_view(d_sz);
         Kokkos::deep_copy(h_sz, d_sz);
-        const bool layout_ok = (h_sz(0) == sizeof(Jet));
+        const bool layout_ok = (h_sz(0) == sizeof(OTINumber));
 
         // ---- each rank evaluates its slice on the DEVICE ----------------------
         long start = 0, count = 0;
         block_range(rank, size, start, count);
-        Kokkos::View<Jet*> d_local("d_local", count);
+        Kokkos::View<OTINumber*> d_local("d_local", count);
         Kokkos::parallel_for(
             "evaluate", count,
             KOKKOS_LAMBDA(int k) { d_local(k) = evaluate(start + k); });
 
         // ---- gather to rank 0; result ends up in h_global (host) either way ---
         std::vector<int> recvcounts, displs;
-        Kokkos::View<Jet*, Kokkos::HostSpace> h_global;
+        Kokkos::View<OTINumber*, Kokkos::HostSpace> h_global;
         if (rank == 0) {
             recvcounts.resize(static_cast<size_t>(size));
             displs.resize(static_cast<size_t>(size));
@@ -112,14 +112,14 @@ int main(int argc, char** argv)
                 recvcounts[static_cast<size_t>(r)] = static_cast<int>(c);
                 displs[static_cast<size_t>(r)] = static_cast<int>(s);
             }
-            h_global = Kokkos::View<Jet*, Kokkos::HostSpace>("h_global", TOTAL);
+            h_global = Kokkos::View<OTINumber*, Kokkos::HostSpace>("h_global", TOTAL);
         }
 
         if (cuda_aware) {
             // device pointers straight into MPI -- no host staging
-            Kokkos::View<Jet*> d_global;
+            Kokkos::View<OTINumber*> d_global;
             if (rank == 0) {
-                d_global = Kokkos::View<Jet*>("d_global", TOTAL);
+                d_global = Kokkos::View<OTINumber*>("d_global", TOTAL);
             }
             MPI_Gatherv(d_local.data(), static_cast<int>(count), MPI_OTINUM,
                         rank == 0 ? d_global.data() : nullptr,
@@ -142,7 +142,7 @@ int main(int argc, char** argv)
 
         // ---- verify on rank 0: device recompute of the full grid, bit-exact ---
         if (rank == 0) {
-            Kokkos::View<Jet*> d_ref("d_ref", TOTAL);
+            Kokkos::View<OTINumber*> d_ref("d_ref", TOTAL);
             Kokkos::parallel_for(
                 "reference", TOTAL,
                 KOKKOS_LAMBDA(long g) { d_ref(g) = evaluate(g); });
@@ -151,13 +151,13 @@ int main(int argc, char** argv)
 
             long mismatches = 0;
             for (long g = 0; g < TOTAL; ++g) {
-                if (std::memcmp(&h_global(g), &h_ref(g), sizeof(Jet)) != 0) {
+                if (std::memcmp(&h_global(g), &h_ref(g), sizeof(OTINumber)) != 0) {
                     ++mismatches;
                 }
             }
 
             const long mid = (TOTAL / 2) + (N / 2);
-            const Jet& s = h_global(static_cast<size_t>(mid));
+            const OTINumber& s = h_global(static_cast<size_t>(mid));
             std::printf("backend          : %s\n",
                         Kokkos::DefaultExecutionSpace::name());
             std::printf("ranks            : %d\n", size);
@@ -165,13 +165,13 @@ int main(int argc, char** argv)
                         cuda_aware ? "CUDA-aware MPI (device pointer)"
                                    : "host staging (deep_copy + MPI)");
             std::printf("grid             : %d x %d (%ld points)\n", N, N, TOTAL);
-            std::printf("sizeof(Jet) host/device : %zu / %zu  %s\n",
-                        sizeof(Jet), h_sz(0), layout_ok ? "OK" : "MISMATCH");
+            std::printf("sizeof(OTI number) host/device : %zu / %zu  %s\n",
+                        sizeof(OTINumber), h_sz(0), layout_ok ? "OK" : "MISMATCH");
             std::printf("sample @ %ld     : value=% .8f  d/dx=% .8f  d/dy=% .8f\n",
                         mid, s.coeff(oti::sparse({})),
                         s.coeff(oti::sparse({{0, 1}})),
                         s.coeff(oti::sparse({{1, 1}})));
-            std::printf("verify (device recompute) : %s (%ld mismatching jets)\n",
+            std::printf("verify (device recompute) : %s (%ld mismatching OTI numbers)\n",
                         (mismatches == 0 && layout_ok) ? "PASS (bit-exact)"
                                                        : "FAIL",
                         mismatches);

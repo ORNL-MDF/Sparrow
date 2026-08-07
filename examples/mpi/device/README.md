@@ -1,7 +1,7 @@
 # MPI + OTI with device-resident buffers
 
 The fifth conversion rung: not a new communication pattern, but the same
-patterns (movement *and* combining) when the jet buffers live in GPU memory.
+patterns (movement *and* combining) when the OTI number buffers live in GPU memory.
 The point of the example is what does **not** change: the committed datatype
 from `oti::mpi::make_datatype`, the custom reduction op from
 `oti::mpi::make_sum_op`, and every count/displacement are identical whether
@@ -9,8 +9,8 @@ the pointers handed to MPI are host or device memory.
 
 Each rank evaluates its block of `f(x, y; a, b) = sin(a·x)·exp(b·y)` on the
 device with the design parameters `(a, b)` seeded as OTI variables, reduces the
-block to one partial-sum jet **on the device** (`Kokkos::parallel_reduce` over
-jets, via a two-line `Kokkos::reduction_identity` specialization), and then
+block to one partial-sum OTI number **on the device** (`Kokkos::parallel_reduce` over
+OTI numbers, via a two-line `Kokkos::reduction_identity` specialization), and then
 runs `MPI_Gatherv` + `MPI_Allreduce` over two transports:
 
 - **host staging** — `deep_copy` to host mirrors, MPI on host buffers. Works
@@ -22,14 +22,14 @@ runs `MPI_Gatherv` + `MPI_Allreduce` over two transports:
 
 The two transports are checked against each other **bit-for-bit**; the staged
 QoI is additionally verified against a serial host recompute to a tight
-relative tolerance, and the raw-coefficient `MPI_SUM` escape hatch for jet
+relative tolerance, and the raw-coefficient `MPI_SUM` escape hatch for OTI number
 sums is checked against the custom op. The program returns nonzero if any
 check fails.
 
 One behavioural fact this example pins down: an `MPI_Op` is a **host**
 callback by the MPI standard, on every implementation. A CUDA-aware MPI
 therefore stages device buffers through host internally before invoking the
-jet-sum callback — correct (verified bit-exact here), but not device-native.
+OTI-number-sum callback — correct (verified bit-exact here), but not device-native.
 Movement collectives, by contrast, move device bytes natively. For a sum, the
 device-native alternative is the escape hatch: `MPI_SUM` over
 `count * ncoeffs` raw doubles, no callback at all.
