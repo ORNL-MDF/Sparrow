@@ -8,7 +8,7 @@ multivariate Taylor polynomials. The primary type is
 floating-point coefficient type.
 
 The source code is hosted on GitHub at
-`Samm-Py/cpp_oti_lib <https://github.com/Samm-Py/cpp_oti_lib>`_.
+`Samm-Py/Sparrow <https://github.com/Samm-Py/Sparrow>`_.
 :ref:`installation:Getting The Code` shows how to clone the repository and what
 tools each workflow needs.
 

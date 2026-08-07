@@ -23,14 +23,14 @@ Getting The Code
 ----------------
 
 The source code lives on GitHub at
-`Samm-Py/cpp_oti_lib <https://github.com/Samm-Py/cpp_oti_lib>`_. Clone it and
+`Samm-Py/Sparrow <https://github.com/Samm-Py/Sparrow>`_. Clone it and
 move into the checkout; every command in this documentation that says "from the
 repository root" means this directory:
 
 .. code-block:: console
 
-   git clone https://github.com/Samm-Py/cpp_oti_lib.git sparrow
-   cd sparrow
+   git clone https://github.com/Samm-Py/Sparrow.git
+   cd Sparrow
 
 There is nothing to build at this point. The scalar C++ library is the header
 tree under ``include/``, so cloning *is* the installation for the header-only
