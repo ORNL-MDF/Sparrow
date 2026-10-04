@@ -339,3 +339,13 @@ inline T oti_erfc(T x) noexcept
 #define OTI_CONSTEXPR_FUNCTION constexpr
 #define OTI_ASSERT(condition) assert(condition)
 #endif
+
+// 1 while compiling device code (the CUDA or HIP device pass, or SYCL device
+// code), 0 on the host. Table accessors use it to choose between a static
+// constexpr member (host: one shared table) and a function-local constexpr copy
+// (device: runtime indices into a host static member are not allowed there).
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__) || defined(__SYCL_DEVICE_ONLY__)
+#define OTI_DEVICE_PASS 1
+#else
+#define OTI_DEVICE_PASS 0
+#endif
