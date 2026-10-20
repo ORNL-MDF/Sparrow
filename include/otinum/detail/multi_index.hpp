@@ -431,6 +431,13 @@ public:
     // alpha_at's callers (the naive path and table tests); runtime-hot device
     // code must instead fold over idx_to_sparse with literal indices, which
     // costs no memory at all (see validity.hpp).
+    //
+    // The *_value accessors below are runtime-indexed too, and the runtime-table
+    // arithmetic path calls them once per product term. They read the static
+    // member on the host and keep the local copy only in device passes
+    // (OTI_DEVICE_PASS): a host function-local constexpr array is rebuilt on every
+    // call, which made each runtime-table multiplication quadratic in the table
+    // size (about 2 ms for one <7,4> product).
     static OTI_CONSTEXPR_FUNCTION alpha_t<M> alpha_at(int index) noexcept
     {
         constexpr auto sparse = make_idx_to_sparse();
@@ -445,20 +452,32 @@ public:
 
     static OTI_CONSTEXPR_FUNCTION int order_of_value(int index) noexcept
     {
+#if OTI_DEVICE_PASS
         constexpr auto values = make_order_of();
         return values[static_cast<std::size_t>(index)];
+#else
+        return order_of[static_cast<std::size_t>(index)];
+#endif
     }
 
     static OTI_CONSTEXPR_FUNCTION int order_offset_value(int degree) noexcept
     {
+#if OTI_DEVICE_PASS
         constexpr auto values = make_order_offset();
         return values[static_cast<std::size_t>(degree)];
+#else
+        return order_offset[static_cast<std::size_t>(degree)];
+#endif
     }
 
     static OTI_CONSTEXPR_FUNCTION double factorial_alpha_value(int index) noexcept
     {
+#if OTI_DEVICE_PASS
         constexpr auto values = make_factorial_alpha();
         return values[static_cast<std::size_t>(index)];
+#else
+        return factorial_alpha[static_cast<std::size_t>(index)];
+#endif
     }
 
     // Coefficient-typed alpha! lookup. Prefer this in numeric code: a float
@@ -473,27 +492,44 @@ public:
 
     static OTI_CONSTEXPR_FUNCTION int product_count_by_output_value(int output) noexcept
     {
+#if OTI_DEVICE_PASS
         constexpr auto offsets = make_product_offset();
         return offsets[static_cast<std::size_t>(output + 1)] -
                offsets[static_cast<std::size_t>(output)];
+#else
+        return product_offset[static_cast<std::size_t>(output + 1)] -
+               product_offset[static_cast<std::size_t>(output)];
+#endif
     }
 
     static OTI_CONSTEXPR_FUNCTION int product_offset_value(int output) noexcept
     {
+#if OTI_DEVICE_PASS
         constexpr auto values = make_product_offset();
         return values[static_cast<std::size_t>(output)];
+#else
+        return product_offset[static_cast<std::size_t>(output)];
+#endif
     }
 
     static OTI_CONSTEXPR_FUNCTION product_term product_term_value(int index) noexcept
     {
+#if OTI_DEVICE_PASS
         constexpr auto values = make_product_terms();
         return values[static_cast<std::size_t>(index)];
+#else
+        return product_terms[static_cast<std::size_t>(index)];
+#endif
     }
 
     static OTI_CONSTEXPR_FUNCTION product_term product_term_by_output_value(int index) noexcept
     {
+#if OTI_DEVICE_PASS
         constexpr auto values = make_product_terms_by_output();
         return values[static_cast<std::size_t>(index)];
+#else
+        return product_terms_by_output[static_cast<std::size_t>(index)];
+#endif
     }
 };
 
